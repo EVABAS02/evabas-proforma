@@ -14,7 +14,167 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          adresse: string | null
+          created_at: string
+          id: string
+          ifu: string | null
+          nom: string
+          telephone: string | null
+          user_id: string
+        }
+        Insert: {
+          adresse?: string | null
+          created_at?: string
+          id?: string
+          ifu?: string | null
+          nom: string
+          telephone?: string | null
+          user_id: string
+        }
+        Update: {
+          adresse?: string | null
+          created_at?: string
+          id?: string
+          ifu?: string | null
+          nom?: string
+          telephone?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      facture_articles: {
+        Row: {
+          designation: string
+          facture_id: string
+          id: string
+          montant: number | null
+          prix_unitaire: number
+          produit_id: string | null
+          quantite: number
+        }
+        Insert: {
+          designation: string
+          facture_id: string
+          id?: string
+          montant?: number | null
+          prix_unitaire: number
+          produit_id?: string | null
+          quantite?: number
+        }
+        Update: {
+          designation?: string
+          facture_id?: string
+          id?: string
+          montant?: number | null
+          prix_unitaire?: number
+          produit_id?: string | null
+          quantite?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facture_articles_facture_id_fkey"
+            columns: ["facture_id"]
+            isOneToOne: false
+            referencedRelation: "factures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facture_articles_produit_id_fkey"
+            columns: ["produit_id"]
+            isOneToOne: false
+            referencedRelation: "produits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      factures: {
+        Row: {
+          client_adresse: string | null
+          client_id: string | null
+          client_ifu: string | null
+          client_nom: string | null
+          client_telephone: string | null
+          created_at: string
+          date_facture: string
+          id: string
+          montant_ttc: number
+          numero: string
+          statut: string
+          user_id: string
+        }
+        Insert: {
+          client_adresse?: string | null
+          client_id?: string | null
+          client_ifu?: string | null
+          client_nom?: string | null
+          client_telephone?: string | null
+          created_at?: string
+          date_facture?: string
+          id?: string
+          montant_ttc?: number
+          numero: string
+          statut?: string
+          user_id: string
+        }
+        Update: {
+          client_adresse?: string | null
+          client_id?: string | null
+          client_ifu?: string | null
+          client_nom?: string | null
+          client_telephone?: string | null
+          created_at?: string
+          date_facture?: string
+          id?: string
+          montant_ttc?: number
+          numero?: string
+          statut?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "factures_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produits: {
+        Row: {
+          categorie: string
+          created_at: string
+          designation: string
+          id: string
+          prix_gros: number | null
+          prix_unitaire: number
+          qte_carton: number | null
+          user_id: string
+        }
+        Insert: {
+          categorie: string
+          created_at?: string
+          designation: string
+          id?: string
+          prix_gros?: number | null
+          prix_unitaire?: number
+          qte_carton?: number | null
+          user_id: string
+        }
+        Update: {
+          categorie?: string
+          created_at?: string
+          designation?: string
+          id?: string
+          prix_gros?: number | null
+          prix_unitaire?: number
+          qte_carton?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
