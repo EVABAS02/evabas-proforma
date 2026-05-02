@@ -5,12 +5,15 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Login from "./pages/Login";
+import Landing from "./pages/Landing";
+import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Factures from "./pages/Factures";
+import InvoiceForm from "./pages/InvoiceForm";
+import InvoiceView from "./pages/InvoiceView";
 import Clients from "./pages/Clients";
 import Produits from "./pages/Produits";
-import PrintInvoice from "./pages/PrintInvoice";
+import Parametres from "./pages/Parametres";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,13 +26,17 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/login" element={<Navigate to="/auth" replace />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/factures" element={<ProtectedRoute><Factures /></ProtectedRoute>} />
-            <Route path="/factures/:id/print" element={<ProtectedRoute><PrintInvoice /></ProtectedRoute>} />
+            <Route path="/factures/nouveau" element={<ProtectedRoute><InvoiceForm /></ProtectedRoute>} />
+            <Route path="/factures/:id" element={<ProtectedRoute><InvoiceView /></ProtectedRoute>} />
+            <Route path="/factures/:id/modifier" element={<ProtectedRoute><InvoiceForm /></ProtectedRoute>} />
             <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
             <Route path="/produits" element={<ProtectedRoute><Produits /></ProtectedRoute>} />
+            <Route path="/parametres" element={<ProtectedRoute><Parametres /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
