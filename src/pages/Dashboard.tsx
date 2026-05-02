@@ -1,109 +1,118 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { FileText, Users, Package, Eye } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useProfile } from '@/hooks/useProfile';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Plus, FileText, Users, Package, TrendingUp, Eye, Pencil, MessageCircle } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
-import { formatFCFA, formatDate } from '@/lib/format';
+import { formatFCFA, formatDateShort } from '@/lib/format';
 import AppLayout from '@/components/AppLayout';
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { data: profile } = useProfile();
+  const company = profile?.company_name || 'Mon Entreprise';
 
-  const { data: factureCount = 0 } = useQuery({
-    queryKey: ['factures-count'],
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const { count } = await supabase.from('factures').select('*', { count: 'exact', head: true });
-      return count || 0;
+      const [{ count: invoiceCount }, { count: clientCount }, { count: productCount }, { data: invoices }] = await Promise.all([
+        supabase.from('invoices').select('*', { count: 'exact', head: true }),
+        supabase.from('clients').select('*', { count: 'exact', head: true }),
+        supabase.from('products').select('*', { count: 'exact', head: true }),
+        supabase.from('invoices').select('total_ttc'),
+      ]);
+      const total = invoices?.reduce((s, i) => s + Number(i.total_ttc), 0) || 0;
+      return { invoiceCount: invoiceCount || 0, clientCount: clientCount || 0, productCount: productCount || 0, total };
     },
   });
 
-  const { data: clientCount = 0 } = useQuery({
-    queryKey: ['clients-count'],
+  const { data: recent = [] } = useQuery({
+    queryKey: ['recent-invoices'],
     queryFn: async () => {
-      const { count } = await supabase.from('clients').select('*', { count: 'exact', head: true });
-      return count || 0;
-    },
-  });
-
-  const { data: produitCount = 0 } = useQuery({
-    queryKey: ['produits-count'],
-    queryFn: async () => {
-      const { count } = await supabase.from('produits').select('*', { count: 'exact', head: true });
-      return count || 0;
-    },
-  });
-
-  const { data: totalTTC = 0 } = useQuery({
-    queryKey: ['total-ttc'],
-    queryFn: async () => {
-      const { data } = await supabase.from('factures').select('montant_ttc');
-      return data?.reduce((sum, f) => sum + Number(f.montant_ttc), 0) || 0;
-    },
-  });
-
-  const { data: recentFactures = [] } = useQuery({
-    queryKey: ['recent-factures'],
-    queryFn: async () => {
-      const { data } = await supabase.from('factures').select('*').order('created_at', { ascending: false }).limit(5);
+      const { data } = await supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(8);
       return data || [];
     },
   });
 
   const kpis = [
-    { label: 'Factures', value: factureCount, icon: FileText, bg: 'bg-blue-50', iconColor: 'text-blue-500' },
-    { label: 'Clients', value: clientCount, icon: Users, bg: 'bg-green-50', iconColor: 'text-green-500' },
-    { label: 'Produits', value: produitCount, icon: Package, bg: 'bg-purple-50', iconColor: 'text-purple-500' },
-    { label: 'Total TTC', value: formatFCFA(totalTTC), icon: FileText, bg: 'bg-amber-50', iconColor: 'text-amber-600' },
+    { label: 'Factures', value: stats?.invoiceCount ?? 0, icon: FileText, color: 'bg-blue-50 text-blue-600' },
+    { label: 'Clients', value: stats?.clientCount ?? 0, icon: Users, color: 'bg-emerald-50 text-emerald-600' },
+    { label: 'Produits', value: stats?.productCount ?? 0, icon: Package, color: 'bg-purple-50 text-purple-600' },
+    { label: 'Total TTC', value: formatFCFA(stats?.total ?? 0), icon: TrendingUp, color: 'bg-amber-50 text-amber-600' },
   ];
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-foreground">Tableau de bord</h1>
+      <div className="space-y-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="font-display text-3xl font-bold">{company}</h1>
+            <p className="text-muted-foreground mt-1">Gestion des factures proforma</p>
+          </div>
+          <Link to="/factures/nouveau">
+            <Button className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90 h-11 px-5 shadow-soft">
+              <Plus className="h-4 w-4 mr-2" /> Nouvelle facture
+            </Button>
+          </Link>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {kpis.map((kpi) => (
-            <Card key={kpi.label} className="shadow-sm">
+          {kpis.map((k) => (
+            <Card key={k.label} className="shadow-card border-border/60">
               <CardContent className="flex items-center gap-4 p-5">
-                <div className={`p-3 rounded-lg ${kpi.bg}`}>
-                  <kpi.icon className={`h-6 w-6 ${kpi.iconColor}`} />
+                <div className={`p-3 rounded-xl ${k.color}`}>
+                  <k.icon className="h-5 w-5" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{kpi.label}</p>
-                  <p className="text-xl font-bold text-foreground">{kpi.value}</p>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">{k.label}</p>
+                  <p className="text-xl font-display font-bold truncate">{k.value}</p>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        <Card className="shadow-sm">
+        <Card className="shadow-card border-border/60">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">Dernières factures</CardTitle>
-            <Link to="/factures" className="text-sm text-accent hover:underline font-medium">Voir tout →</Link>
+            <CardTitle className="font-display">Factures récentes</CardTitle>
+            <Link to="/factures" className="text-sm text-primary hover:underline font-medium">Voir tout →</Link>
           </CardHeader>
           <CardContent>
-            {recentFactures.length === 0 ? (
-              <p className="text-muted-foreground text-sm py-4">Aucune facture pour le moment.</p>
+            {recent.length === 0 ? (
+              <p className="text-muted-foreground text-sm py-6 text-center">Aucune facture pour le moment.</p>
             ) : (
-              <div className="space-y-3">
-                {recentFactures.map((f) => (
-                  <div key={f.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                    <div className="flex items-center gap-4">
-                      <span className="font-mono text-sm font-medium">{f.numero}</span>
-                      <span className="text-sm text-muted-foreground">{f.client_nom || '—'}</span>
-                      <StatusBadge status={f.statut} />
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-medium">{formatFCFA(Number(f.montant_ttc))}</span>
-                      <Link to={`/factures/${f.id}/print`} className="text-muted-foreground hover:text-foreground">
-                        <Eye className="h-4 w-4" />
-                      </Link>
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-muted-foreground border-b">
+                      <th className="py-3 pr-4">N°</th>
+                      <th className="py-3 pr-4">Client</th>
+                      <th className="py-3 pr-4">Date</th>
+                      <th className="py-3 pr-4 text-right">Montant</th>
+                      <th className="py-3 pr-4">Statut</th>
+                      <th className="py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recent.map((f) => (
+                      <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30">
+                        <td className="py-3 pr-4 font-mono font-medium">{f.invoice_number}</td>
+                        <td className="py-3 pr-4">{f.client_name || '—'}</td>
+                        <td className="py-3 pr-4 text-muted-foreground">{formatDateShort(f.date)}</td>
+                        <td className="py-3 pr-4 text-right font-medium tabular-nums">{formatFCFA(Number(f.total_ttc))}</td>
+                        <td className="py-3 pr-4"><StatusBadge status={f.status} /></td>
+                        <td className="py-3 text-right">
+                          <div className="inline-flex gap-1">
+                            <Link to={`/factures/${f.id}`} title="Voir"><Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="h-4 w-4" /></Button></Link>
+                            <Link to={`/factures/${f.id}/modifier`} title="Modifier"><Button variant="ghost" size="icon" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button></Link>
+                            <Link to={`/factures/${f.id}`} title="WhatsApp"><Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600"><MessageCircle className="h-4 w-4" /></Button></Link>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>
