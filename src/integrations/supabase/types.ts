@@ -16,125 +16,143 @@ export type Database = {
     Tables: {
       clients: {
         Row: {
-          adresse: string | null
+          address: string | null
           created_at: string
+          email: string | null
           id: string
           ifu: string | null
-          nom: string
-          telephone: string | null
+          name: string
+          phone: string | null
+          updated_at: string
           user_id: string
         }
         Insert: {
-          adresse?: string | null
+          address?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           ifu?: string | null
-          nom: string
-          telephone?: string | null
+          name: string
+          phone?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
-          adresse?: string | null
+          address?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           ifu?: string | null
-          nom?: string
-          telephone?: string | null
+          name?: string
+          phone?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
       }
-      facture_articles: {
+      invoice_items: {
         Row: {
           designation: string
-          facture_id: string
           id: string
-          montant: number | null
-          prix_unitaire: number
-          produit_id: string | null
-          quantite: number
+          invoice_id: string
+          position: number
+          product_id: string | null
+          quantity: number
+          total: number
+          unit_price: number
         }
         Insert: {
           designation: string
-          facture_id: string
           id?: string
-          montant?: number | null
-          prix_unitaire: number
-          produit_id?: string | null
-          quantite?: number
+          invoice_id: string
+          position?: number
+          product_id?: string | null
+          quantity?: number
+          total?: number
+          unit_price?: number
         }
         Update: {
           designation?: string
-          facture_id?: string
           id?: string
-          montant?: number | null
-          prix_unitaire?: number
-          produit_id?: string | null
-          quantite?: number
+          invoice_id?: string
+          position?: number
+          product_id?: string | null
+          quantity?: number
+          total?: number
+          unit_price?: number
         }
         Relationships: [
           {
-            foreignKeyName: "facture_articles_facture_id_fkey"
-            columns: ["facture_id"]
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
             isOneToOne: false
-            referencedRelation: "factures"
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "facture_articles_produit_id_fkey"
-            columns: ["produit_id"]
+            foreignKeyName: "invoice_items_product_id_fkey"
+            columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: "produits"
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
       }
-      factures: {
+      invoices: {
         Row: {
-          client_adresse: string | null
+          client_address: string | null
+          client_email: string | null
           client_id: string | null
           client_ifu: string | null
-          client_nom: string | null
-          client_telephone: string | null
+          client_name: string | null
+          client_phone: string | null
           created_at: string
-          date_facture: string
+          date: string
           id: string
-          montant_ttc: number
-          numero: string
-          statut: string
+          invoice_number: string
+          notes: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          total_ttc: number
+          updated_at: string
           user_id: string
         }
         Insert: {
-          client_adresse?: string | null
+          client_address?: string | null
+          client_email?: string | null
           client_id?: string | null
           client_ifu?: string | null
-          client_nom?: string | null
-          client_telephone?: string | null
+          client_name?: string | null
+          client_phone?: string | null
           created_at?: string
-          date_facture?: string
+          date?: string
           id?: string
-          montant_ttc?: number
-          numero: string
-          statut?: string
+          invoice_number: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          total_ttc?: number
+          updated_at?: string
           user_id: string
         }
         Update: {
-          client_adresse?: string | null
+          client_address?: string | null
+          client_email?: string | null
           client_id?: string | null
           client_ifu?: string | null
-          client_nom?: string | null
-          client_telephone?: string | null
+          client_name?: string | null
+          client_phone?: string | null
           created_at?: string
-          date_facture?: string
+          date?: string
           id?: string
-          montant_ttc?: number
-          numero?: string
-          statut?: string
+          invoice_number?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          total_ttc?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "factures_client_id_fkey"
+            foreignKeyName: "invoices_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
@@ -142,36 +160,69 @@ export type Database = {
           },
         ]
       }
-      produits: {
+      products: {
         Row: {
-          categorie: string
+          category: string | null
           created_at: string
-          designation: string
+          description: string | null
           id: string
-          prix_gros: number | null
-          prix_unitaire: number
-          qte_carton: number | null
+          name: string
+          unit_price: number
+          updated_at: string
           user_id: string
         }
         Insert: {
-          categorie: string
+          category?: string | null
           created_at?: string
-          designation: string
+          description?: string | null
           id?: string
-          prix_gros?: number | null
-          prix_unitaire?: number
-          qte_carton?: number | null
+          name: string
+          unit_price?: number
+          updated_at?: string
           user_id: string
         }
         Update: {
-          categorie?: string
+          category?: string | null
           created_at?: string
-          designation?: string
+          description?: string | null
           id?: string
-          prix_gros?: number | null
-          prix_unitaire?: number
-          qte_carton?: number | null
+          name?: string
+          unit_price?: number
+          updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          company_address: string | null
+          company_city: string | null
+          company_name: string
+          created_at: string
+          email: string | null
+          id: string
+          phone_whatsapp: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_address?: string | null
+          company_city?: string | null
+          company_name?: string
+          created_at?: string
+          email?: string | null
+          id: string
+          phone_whatsapp?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_address?: string | null
+          company_city?: string | null
+          company_name?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          phone_whatsapp?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -183,7 +234,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      invoice_status: "brouillon" | "envoyee" | "payee"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -310,6 +361,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      invoice_status: ["brouillon", "envoyee", "payee"],
+    },
   },
 } as const
