@@ -84,6 +84,7 @@ export default function InvoiceForm() {
         client_id: clientId || null,
         date, status, notes,
         total_ttc: Math.round(total),
+        invoice_number: '',
         client_name: client?.name || null,
         client_address: client?.address || null,
         client_phone: client?.phone || null,
