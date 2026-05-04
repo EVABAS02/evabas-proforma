@@ -13,7 +13,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ["DM Sans", "system-ui", "sans-serif"],
-        display: ["Outfit", "sans-serif"],
+        display: ["Syne", "sans-serif"],
         script: ["Dancing Script", "cursive"],
       },
       colors: {

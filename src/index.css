@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&family=Dancing+Script:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=Dancing+Script:wght@600;700&display=swap');
 
 @layer base {
   :root {
@@ -71,7 +71,7 @@
   * { @apply border-border; }
   html, body { font-family: 'DM Sans', system-ui, sans-serif; }
   body { @apply bg-background text-foreground; }
-  h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Outfit', sans-serif; letter-spacing: -0.02em; }
+  h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Syne', sans-serif; letter-spacing: -0.02em; }
   .font-script { font-family: 'Dancing Script', cursive; }
 }
 
