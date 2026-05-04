@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, FileText, Users, Package, TrendingUp, Eye, Pencil, MessageCircle } from 'lucide-react';
+import { Plus, Eye, Pencil, MessageCircle } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import { formatFCFA, formatDateShort } from '@/lib/format';
 import AppLayout from '@/components/AppLayout';
@@ -36,10 +36,10 @@ export default function Dashboard() {
   });
 
   const kpis = [
-    { label: 'Factures', value: stats?.invoiceCount ?? 0, icon: FileText, color: 'bg-blue-50 text-blue-600' },
-    { label: 'Clients', value: stats?.clientCount ?? 0, icon: Users, color: 'bg-emerald-50 text-emerald-600' },
-    { label: 'Produits', value: stats?.productCount ?? 0, icon: Package, color: 'bg-purple-50 text-purple-600' },
-    { label: 'Total TTC', value: formatFCFA(stats?.total ?? 0), icon: TrendingUp, color: 'bg-amber-50 text-amber-600' },
+    { label: 'Factures', value: stats?.invoiceCount ?? 0 },
+    { label: 'Clients', value: stats?.clientCount ?? 0 },
+    { label: 'Produits', value: stats?.productCount ?? 0 },
+    { label: 'Total TTC', value: formatFCFA(stats?.total ?? 0) },
   ];
 
   return (
@@ -59,17 +59,10 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {kpis.map((k) => (
-            <Card key={k.label} className="shadow-card border-border/60">
-              <CardContent className="flex items-center gap-4 p-5">
-                <div className={`p-3 rounded-xl ${k.color}`}>
-                  <k.icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">{k.label}</p>
-                  <p className="text-xl font-display font-bold truncate">{k.value}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <div key={k.label} className="bg-white border border-[#E5E7EB] rounded-xl p-5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+              <p className="text-[12px] uppercase tracking-wide text-[#6B7280] font-medium">{k.label}</p>
+              <p className="font-display font-bold text-[28px] text-[#0F172A] mt-2 truncate">{k.value}</p>
+            </div>
           ))}
         </div>
 
