@@ -10,11 +10,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, Trash2, ArrowLeft, PenLine } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatFCFA } from '@/lib/format';
 
-type Item = { id?: string; product_id: string | null; designation: string; quantity: number; unit_price: number };
+type Item = { id?: string; product_id: string | null; designation: string; quantity: number; unit_price: number; manual?: boolean };
+
+const MANUAL = '__manual__';
 
 export default function InvoiceForm() {
   const { id } = useParams();
@@ -23,10 +26,13 @@ export default function InvoiceForm() {
   const nav = useNavigate();
 
   const [clientId, setClientId] = useState<string>('');
+  const [manualClientName, setManualClientName] = useState<string>('');
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [status, setStatus] = useState<'brouillon' | 'envoyee' | 'payee'>('brouillon');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<Item[]>([{ product_id: null, designation: '', quantity: 1, unit_price: 0 }]);
+  const [applyTVA, setApplyTVA] = useState(true);
+  const [applyMTCC, setApplyMTCC] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const { data: clients = [] } = useQuery({
@@ -49,18 +55,27 @@ export default function InvoiceForm() {
     (async () => {
       const { data: inv } = await supabase.from('invoices').select('*').eq('id', id!).maybeSingle();
       if (!inv) return;
-      setClientId(inv.client_id || '');
+      if (inv.client_id) {
+        setClientId(inv.client_id);
+      } else if (inv.client_name) {
+        setClientId(MANUAL);
+        setManualClientName(inv.client_name);
+      }
       setDate(inv.date);
       setStatus(inv.status);
       setNotes(inv.notes || '');
       const { data: its } = await supabase.from('invoice_items').select('*').eq('invoice_id', id!).order('position');
-      setItems((its || []).map(it => ({ id: it.id, product_id: it.product_id, designation: it.designation, quantity: it.quantity, unit_price: it.unit_price })));
+      setItems((its || []).map(it => ({ id: it.id, product_id: it.product_id, designation: it.designation, quantity: it.quantity, unit_price: it.unit_price, manual: !it.product_id })));
     })();
   }, [id, editing]);
 
-  const total = items.reduce((s, it) => s + it.quantity * it.unit_price, 0);
+  const totalHT = items.reduce((s, it) => s + it.quantity * it.unit_price, 0);
+  const tva = applyTVA ? totalHT * 0.18 : 0;
+  const mtcc = applyMTCC ? totalHT * 0.01 : 0;
+  const totalTTC = totalHT + tva + mtcc;
 
-  const addItem = () => setItems([...items, { product_id: null, designation: '', quantity: 1, unit_price: 0 }]);
+  const addItem = () => setItems([...items, { product_id: null, designation: '', quantity: 1, unit_price: 0, manual: false }]);
+  const addManualItem = () => setItems([...items, { product_id: null, designation: '', quantity: 1, unit_price: 0, manual: true }]);
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
   const updateItem = (i: number, patch: Partial<Item>) => setItems(items.map((it, idx) => idx === i ? { ...it, ...patch } : it));
 
@@ -78,14 +93,15 @@ export default function InvoiceForm() {
     }
     setLoading(true);
     try {
-      const client = clients.find(c => c.id === clientId);
+      const isManualClient = clientId === MANUAL;
+      const client = isManualClient ? null : clients.find(c => c.id === clientId);
       const payload = {
         user_id: user.id,
-        client_id: clientId || null,
+        client_id: isManualClient || !clientId ? null : clientId,
         date, status, notes,
-        total_ttc: Math.round(total),
+        total_ttc: Math.round(totalTTC),
         invoice_number: '',
-        client_name: client?.name || null,
+        client_name: isManualClient ? (manualClientName.trim() || null) : (client?.name || null),
         client_address: client?.address || null,
         client_phone: client?.phone || null,
         client_email: client?.email || null,
@@ -136,14 +152,22 @@ export default function InvoiceForm() {
           <Card className="shadow-card border-border/60">
             <CardHeader><CardTitle className="font-display">Informations</CardTitle></CardHeader>
             <CardContent className="grid md:grid-cols-3 gap-4">
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 space-y-2">
                 <Label>Client</Label>
                 <Select value={clientId} onValueChange={setClientId}>
                   <SelectTrigger><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
                   <SelectContent>
                     {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    <SelectItem value={MANUAL}>✏️ Saisir manuellement</SelectItem>
                   </SelectContent>
                 </Select>
+                {clientId === MANUAL && (
+                  <Input
+                    value={manualClientName}
+                    onChange={e => setManualClientName(e.target.value)}
+                    placeholder="Nom du client (saisie libre)"
+                  />
+                )}
               </div>
               <div><Label>Date</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
               <div>
@@ -162,27 +186,39 @@ export default function InvoiceForm() {
           </Card>
 
           <Card className="shadow-card border-border/60">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
               <CardTitle className="font-display">Articles</CardTitle>
-              <Button type="button" onClick={addItem} variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />Ajouter une ligne</Button>
+              <div className="flex gap-2">
+                <Button type="button" onClick={addItem} variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />Ajouter une ligne</Button>
+                <Button type="button" onClick={addManualItem} variant="outline" size="sm"><PenLine className="h-4 w-4 mr-1" />Ajouter une ligne libre</Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {items.map((it, i) => (
                   <div key={i} className="grid grid-cols-12 gap-2 items-end">
-                    <div className="col-span-12 md:col-span-3">
-                      {i === 0 && <Label className="text-xs">Produit</Label>}
-                      <Select value={it.product_id || ''} onValueChange={(v) => pickProduct(i, v)}>
-                        <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
-                        <SelectContent>
-                          {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="col-span-12 md:col-span-4">
-                      {i === 0 && <Label className="text-xs">Désignation</Label>}
-                      <Input value={it.designation} onChange={e => updateItem(i, { designation: e.target.value })} placeholder="Désignation" />
-                    </div>
+                    {it.manual ? (
+                      <div className="col-span-12 md:col-span-7">
+                        {i === 0 && <Label className="text-xs">Désignation (saisie libre)</Label>}
+                        <Input value={it.designation} onChange={e => updateItem(i, { designation: e.target.value })} placeholder="Désignation libre" />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="col-span-12 md:col-span-3">
+                          {i === 0 && <Label className="text-xs">Produit</Label>}
+                          <Select value={it.product_id || ''} onValueChange={(v) => pickProduct(i, v)}>
+                            <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                            <SelectContent>
+                              {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-12 md:col-span-4">
+                          {i === 0 && <Label className="text-xs">Désignation</Label>}
+                          <Input value={it.designation} onChange={e => updateItem(i, { designation: e.target.value })} placeholder="Désignation" />
+                        </div>
+                      </>
+                    )}
                     <div className="col-span-4 md:col-span-1">
                       {i === 0 && <Label className="text-xs">Qté</Label>}
                       <Input type="number" min="1" value={it.quantity} onChange={e => updateItem(i, { quantity: Number(e.target.value) })} />
@@ -201,10 +237,25 @@ export default function InvoiceForm() {
                   </div>
                 ))}
               </div>
-              <div className="flex justify-end mt-6 pt-4 border-t">
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Montant TTC</p>
-                  <p className="font-display text-3xl font-bold text-primary tabular-nums">{formatFCFA(total)}</p>
+              <div className="flex flex-col md:flex-row justify-between gap-6 mt-6 pt-4 border-t">
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox checked={applyTVA} onCheckedChange={(v) => setApplyTVA(!!v)} />
+                    Appliquer TVA 18%
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox checked={applyMTCC} onCheckedChange={(v) => setApplyMTCC(!!v)} />
+                    Appliquer MTCC 1%
+                  </label>
+                </div>
+                <div className="min-w-[260px] space-y-1.5 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Montant HT</span><span className="tabular-nums font-medium">{formatFCFA(totalHT)}</span></div>
+                  {applyTVA && <div className="flex justify-between"><span className="text-muted-foreground">TVA (18%)</span><span className="tabular-nums">{formatFCFA(tva)}</span></div>}
+                  {applyMTCC && <div className="flex justify-between"><span className="text-muted-foreground">MTCC (1%)</span><span className="tabular-nums">{formatFCFA(mtcc)}</span></div>}
+                  <div className="flex justify-between pt-2 border-t mt-2">
+                    <span className="font-display font-bold">Total TTC</span>
+                    <span className="font-display font-bold text-lg tabular-nums" style={{ color: '#6366F1' }}>{formatFCFA(totalTTC)}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
