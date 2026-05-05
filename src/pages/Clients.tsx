@@ -69,12 +69,12 @@ export default function Clients() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex flex-wrap justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap justify-between gap-4">
           <div>
-            <h1 className="font-display text-3xl font-bold">Clients</h1>
-            <p className="text-muted-foreground">Gérez votre carnet d'adresses</p>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold">Clients</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Gérez votre carnet d'adresses</p>
           </div>
-          <Button onClick={openNew} className="rounded-full bg-accent hover:bg-accent/90"><Plus className="h-4 w-4 mr-2" />Nouveau client</Button>
+          <Button onClick={openNew} className="w-full sm:w-auto rounded-full bg-accent hover:bg-accent/90 h-11"><Plus className="h-4 w-4 mr-2" />Nouveau client</Button>
         </div>
 
         <Card className="shadow-card border-border/60">
@@ -88,7 +88,23 @@ export default function Clients() {
             {filtered.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">Aucun client</p>
             ) : (
-              <div className="overflow-x-auto">
+              <>
+              <div className="md:hidden space-y-3">
+                {filtered.map(c => (
+                  <div key={c.id} className="border border-border rounded-lg p-4 flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{c.name}</p>
+                      {c.phone && <p className="text-xs text-muted-foreground mt-0.5">{c.phone}</p>}
+                      {c.email && <p className="text-xs text-muted-foreground truncate">{c.email}</p>}
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => remove(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs text-muted-foreground border-b">
@@ -115,6 +131,7 @@ export default function Clients() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </CardContent>
         </Card>

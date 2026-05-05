@@ -50,13 +50,13 @@ export default function Factures() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex flex-wrap justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap justify-between gap-4">
           <div>
-            <h1 className="font-display text-3xl font-bold">Factures</h1>
-            <p className="text-muted-foreground">Toutes vos factures proforma</p>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold">Factures</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Toutes vos factures proforma</p>
           </div>
-          <Link to="/factures/nouveau">
-            <Button className="rounded-full bg-accent hover:bg-accent/90"><Plus className="h-4 w-4 mr-2" />Nouvelle facture</Button>
+          <Link to="/factures/nouveau" className="sm:w-auto">
+            <Button className="w-full sm:w-auto rounded-full bg-accent hover:bg-accent/90 h-11"><Plus className="h-4 w-4 mr-2" />Nouvelle facture</Button>
           </Link>
         </div>
 
