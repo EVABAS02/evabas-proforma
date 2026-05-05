@@ -44,24 +44,24 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="space-y-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="space-y-6 sm:space-y-8">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-start justify-between gap-4">
           <div>
-            <h1 className="font-display text-3xl font-bold">{company}</h1>
-            <p className="text-muted-foreground mt-1">Gestion des factures proforma</p>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold">{company}</h1>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">Gestion des factures proforma</p>
           </div>
-          <Link to="/factures/nouveau">
-            <Button className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90 h-11 px-5 shadow-soft">
+          <Link to="/factures/nouveau" className="sm:w-auto">
+            <Button className="w-full sm:w-auto rounded-full bg-accent text-accent-foreground hover:bg-accent/90 h-11 px-5 shadow-soft">
               <Plus className="h-4 w-4 mr-2" /> Nouvelle facture
             </Button>
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {kpis.map((k) => (
             <div key={k.label} className="bg-white border border-[#E5E7EB] rounded-xl p-5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
               <p className="text-[12px] uppercase tracking-wide text-[#6B7280] font-medium">{k.label}</p>
-              <p className="font-display font-bold text-[28px] text-[#0F172A] mt-2 truncate">{k.value}</p>
+              <p className="font-display font-bold text-[22px] sm:text-[28px] text-[#0F172A] mt-2 truncate">{k.value}</p>
             </div>
           ))}
         </div>
@@ -81,10 +81,10 @@ export default function Dashboard() {
                     <tr className="text-left text-xs text-muted-foreground border-b">
                       <th className="py-3 pr-4">N°</th>
                       <th className="py-3 pr-4">Client</th>
-                      <th className="py-3 pr-4">Date</th>
+                      <th className="py-3 pr-4 hidden md:table-cell">Date</th>
                       <th className="py-3 pr-4 text-right">Montant</th>
                       <th className="py-3 pr-4">Statut</th>
-                      <th className="py-3 text-right">Actions</th>
+                      <th className="py-3 text-right hidden sm:table-cell">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -92,10 +92,10 @@ export default function Dashboard() {
                       <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30">
                         <td className="py-3 pr-4 font-mono font-medium">{f.invoice_number}</td>
                         <td className="py-3 pr-4">{f.client_name || '—'}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">{formatDateShort(f.date)}</td>
+                        <td className="py-3 pr-4 text-muted-foreground hidden md:table-cell">{formatDateShort(f.date)}</td>
                         <td className="py-3 pr-4 text-right font-medium tabular-nums">{formatFCFA(Number(f.total_ttc))}</td>
                         <td className="py-3 pr-4"><StatusBadge status={f.status} /></td>
-                        <td className="py-3 text-right">
+                        <td className="py-3 text-right hidden sm:table-cell">
                           <div className="inline-flex gap-1">
                             <Link to={`/factures/${f.id}`} title="Voir"><Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="h-4 w-4" /></Button></Link>
                             <Link to={`/factures/${f.id}/modifier`} title="Modifier"><Button variant="ghost" size="icon" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button></Link>
