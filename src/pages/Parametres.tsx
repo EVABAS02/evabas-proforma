@@ -44,23 +44,23 @@ export default function Parametres() {
     <AppLayout>
       <div className="max-w-2xl space-y-6">
         <div>
-          <h1 className="font-display text-3xl font-bold">Paramètres</h1>
-          <p className="text-muted-foreground">Informations de votre entreprise</p>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold">Paramètres</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Informations de votre entreprise</p>
         </div>
         <Card className="shadow-card border-border/60">
           <CardHeader><CardTitle className="font-display">Profil entreprise</CardTitle></CardHeader>
           <CardContent>
             <form onSubmit={save} className="space-y-4">
               <div><Label>Nom de l'entreprise *</Label><Input value={form.company_name} onChange={e => setForm({ ...form, company_name: e.target.value })} required /></div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>Adresse</Label><Input value={form.company_address} onChange={e => setForm({ ...form, company_address: e.target.value })} /></div>
                 <div><Label>Ville</Label><Input value={form.company_city} onChange={e => setForm({ ...form, company_city: e.target.value })} /></div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>WhatsApp</Label><Input value={form.phone_whatsapp} onChange={e => setForm({ ...form, phone_whatsapp: e.target.value })} placeholder="+229 ..." /></div>
                 <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
               </div>
-              <Button type="submit" disabled={saving} className="bg-primary hover:bg-primary/90">
+              <Button type="submit" disabled={saving} className="w-full sm:w-auto bg-primary hover:bg-primary/90 h-11">
                 {saving ? 'Enregistrement...' : 'Enregistrer'}
               </Button>
             </form>

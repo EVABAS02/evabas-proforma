@@ -72,19 +72,19 @@ export default function InvoiceView() {
   return (
     <AppLayout>
       <div className="space-y-6 max-w-4xl mx-auto">
-        <div className="flex flex-wrap items-center justify-between gap-3 no-print">
-          <Link to="/factures">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 no-print">
+          <Link to="/factures" className="self-start">
             <Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-2" />Retour</Button>
           </Link>
-          <div className="flex flex-wrap gap-2">
-            <Link to={`/factures/${id}/modifier`}><Button variant="outline" size="sm"><Pencil className="h-4 w-4 mr-2" />Modifier</Button></Link>
-            <Button onClick={downloadPDF} size="sm" className="bg-accent hover:bg-accent/90"><Download className="h-4 w-4 mr-2" />Télécharger PDF</Button>
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+            <Link to={`/factures/${id}/modifier`}><Button variant="outline" size="sm" className="w-full"><Pencil className="h-4 w-4 mr-2" />Modifier</Button></Link>
+            <Button onClick={downloadPDF} size="sm" className="bg-accent hover:bg-accent/90"><Download className="h-4 w-4 mr-2" />PDF</Button>
             <Button onClick={() => window.print()} variant="outline" size="sm"><Printer className="h-4 w-4 mr-2" />Imprimer</Button>
-            <Button onClick={shareWhatsApp} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white"><MessageCircle className="h-4 w-4 mr-2" />Partager WhatsApp</Button>
+            <Button onClick={shareWhatsApp} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white"><MessageCircle className="h-4 w-4 mr-2" />WhatsApp</Button>
           </div>
         </div>
 
-        <div ref={printRef} className="bg-white rounded-xl shadow-card p-10 print:shadow-none print:rounded-none print:p-0">
+        <div ref={printRef} className="bg-white rounded-xl shadow-card p-5 sm:p-10 print:shadow-none print:rounded-none print:p-0 text-[12px] sm:text-sm">
           {/* HEADER */}
           <div className="flex justify-between items-start pb-6 border-b-2 border-primary/20">
             <div>
@@ -145,13 +145,6 @@ export default function InvoiceView() {
               </div>
             </div>
           </div>
-
-          {invoice.notes && (
-            <div className="mt-8 p-4 bg-muted/40 rounded-lg">
-              <p className="text-xs font-semibold text-muted-foreground mb-1">Notes</p>
-              <p className="text-sm whitespace-pre-wrap">{invoice.notes}</p>
-            </div>
-          )}
 
           <p className="text-center text-sm text-muted-foreground italic mt-10 pt-6 border-t">
             {company}{profile?.company_city ? ` — ${profile.company_city}` : ''} · Merci pour votre confiance
