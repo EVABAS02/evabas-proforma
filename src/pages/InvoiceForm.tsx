@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Trash2, ArrowLeft, PenLine } from 'lucide-react';
@@ -29,7 +28,6 @@ export default function InvoiceForm() {
   const [manualClientName, setManualClientName] = useState<string>('');
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [status, setStatus] = useState<'brouillon' | 'envoyee' | 'payee'>('brouillon');
-  const [notes, setNotes] = useState('');
   const [items, setItems] = useState<Item[]>([{ product_id: null, designation: '', quantity: 1, unit_price: 0 }]);
   const [applyTVA, setApplyTVA] = useState(true);
   const [applyMTCC, setApplyMTCC] = useState(true);
@@ -63,7 +61,6 @@ export default function InvoiceForm() {
       }
       setDate(inv.date);
       setStatus(inv.status);
-      setNotes(inv.notes || '');
       const { data: its } = await supabase.from('invoice_items').select('*').eq('invoice_id', id!).order('position');
       setItems((its || []).map(it => ({ id: it.id, product_id: it.product_id, designation: it.designation, quantity: it.quantity, unit_price: it.unit_price, manual: !it.product_id })));
     })();
@@ -98,7 +95,7 @@ export default function InvoiceForm() {
       const payload = {
         user_id: user.id,
         client_id: isManualClient || !clientId ? null : clientId,
-        date, status, notes,
+        date, status, notes: '',
         total_ttc: Math.round(totalTTC),
         invoice_number: '',
         client_name: isManualClient ? (manualClientName.trim() || null) : (client?.name || null),
@@ -151,7 +148,7 @@ export default function InvoiceForm() {
         <form onSubmit={submit} className="space-y-6">
           <Card className="shadow-card border-border/60">
             <CardHeader><CardTitle className="font-display">Informations</CardTitle></CardHeader>
-            <CardContent className="grid md:grid-cols-3 gap-4">
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2 space-y-2">
                 <Label>Client</Label>
                 <Select value={clientId} onValueChange={setClientId}>
@@ -181,31 +178,32 @@ export default function InvoiceForm() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="md:col-span-3"><Label>Notes</Label><Textarea value={notes} onChange={e => setNotes(e.target.value)} /></div>
             </CardContent>
           </Card>
 
           <Card className="shadow-card border-border/60">
             <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
               <CardTitle className="font-display">Articles</CardTitle>
-              <div className="flex gap-2">
-                <Button type="button" onClick={addItem} variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />Ajouter une ligne</Button>
-                <Button type="button" onClick={addManualItem} variant="outline" size="sm"><PenLine className="h-4 w-4 mr-1" />Ajouter une ligne libre</Button>
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                <Button type="button" onClick={addItem} variant="outline" size="sm" className="flex-1 sm:flex-none"><Plus className="h-4 w-4 mr-1" />Ajouter</Button>
+                <Button type="button" onClick={addManualItem} variant="outline" size="sm" className="flex-1 sm:flex-none"><PenLine className="h-4 w-4 mr-1" />Ligne libre</Button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {items.map((it, i) => (
-                  <div key={i} className="grid grid-cols-12 gap-2 items-end">
+                  <div key={i} className="grid grid-cols-12 gap-2 items-end p-3 sm:p-0 border sm:border-0 rounded-lg sm:rounded-none">
                     {it.manual ? (
                       <div className="col-span-12 md:col-span-7">
-                        {i === 0 && <Label className="text-xs">Désignation (saisie libre)</Label>}
+                        <Label className="text-xs sm:hidden">Désignation</Label>
+                        {i === 0 && <Label className="text-xs hidden sm:block">Désignation (saisie libre)</Label>}
                         <Input value={it.designation} onChange={e => updateItem(i, { designation: e.target.value })} placeholder="Désignation libre" />
                       </div>
                     ) : (
                       <>
                         <div className="col-span-12 md:col-span-3">
-                          {i === 0 && <Label className="text-xs">Produit</Label>}
+                          <Label className="text-xs sm:hidden">Produit</Label>
+                          {i === 0 && <Label className="text-xs hidden sm:block">Produit</Label>}
                           <Select value={it.product_id || ''} onValueChange={(v) => pickProduct(i, v)}>
                             <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
                             <SelectContent>
@@ -214,24 +212,28 @@ export default function InvoiceForm() {
                           </Select>
                         </div>
                         <div className="col-span-12 md:col-span-4">
-                          {i === 0 && <Label className="text-xs">Désignation</Label>}
+                          <Label className="text-xs sm:hidden">Désignation</Label>
+                          {i === 0 && <Label className="text-xs hidden sm:block">Désignation</Label>}
                           <Input value={it.designation} onChange={e => updateItem(i, { designation: e.target.value })} placeholder="Désignation" />
                         </div>
                       </>
                     )}
-                    <div className="col-span-4 md:col-span-1">
-                      {i === 0 && <Label className="text-xs">Qté</Label>}
+                    <div className="col-span-5 md:col-span-1">
+                      <Label className="text-xs sm:hidden">Qté</Label>
+                      {i === 0 && <Label className="text-xs hidden sm:block">Qté</Label>}
                       <Input type="number" min="1" value={it.quantity} onChange={e => updateItem(i, { quantity: Number(e.target.value) })} />
                     </div>
-                    <div className="col-span-4 md:col-span-2">
-                      {i === 0 && <Label className="text-xs">PU (FCFA)</Label>}
+                    <div className="col-span-7 md:col-span-2">
+                      <Label className="text-xs sm:hidden">PU (FCFA)</Label>
+                      {i === 0 && <Label className="text-xs hidden sm:block">PU (FCFA)</Label>}
                       <Input type="number" min="0" value={it.unit_price} onChange={e => updateItem(i, { unit_price: Number(e.target.value) })} />
                     </div>
-                    <div className="col-span-3 md:col-span-1 text-right text-sm tabular-nums">
-                      {i === 0 && <Label className="text-xs">Total</Label>}
+                    <div className="col-span-9 md:col-span-1 text-right text-sm tabular-nums">
+                      <Label className="text-xs sm:hidden">Total</Label>
+                      {i === 0 && <Label className="text-xs hidden sm:block">Total</Label>}
                       <div className="h-10 flex items-center justify-end font-medium">{formatFCFA(it.quantity * it.unit_price)}</div>
                     </div>
-                    <div className="col-span-1">
+                    <div className="col-span-3 md:col-span-1 flex justify-end">
                       <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(i)} disabled={items.length === 1} className="h-10 w-10 text-destructive"><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
@@ -261,9 +263,9 @@ export default function InvoiceForm() {
             </CardContent>
           </Card>
 
-          <div className="flex justify-end gap-3">
-            <Link to="/factures"><Button type="button" variant="outline">Annuler</Button></Link>
-            <Button type="submit" disabled={loading} className="bg-primary hover:bg-primary/90">
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
+            <Link to="/factures" className="sm:w-auto"><Button type="button" variant="outline" className="w-full sm:w-auto">Annuler</Button></Link>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto bg-primary hover:bg-primary/90">
               {loading ? 'Enregistrement...' : editing ? 'Mettre à jour' : 'Créer la facture'}
             </Button>
           </div>
