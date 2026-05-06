@@ -3,15 +3,15 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Logo } from '@/components/Logo';
-import { Users, Package, FileText, Zap, MessageCircle, Clock, Check, Star, Mail, Menu, X, ArrowRight } from 'lucide-react';
+import { Users2, LayoutGrid, FileDown, Zap, Send, ClipboardList, MessageCircle, Check, Star, Mail, Menu, X, ArrowRight } from 'lucide-react';
 
 const features = [
-  { icon: Users, title: 'Gestion des clients', desc: 'Ajoutez et organisez vos clients avec toutes leurs informations en un seul endroit.' },
-  { icon: Package, title: 'Catalogue produits', desc: 'Créez votre catalogue avec prix unitaires prédéfinis en FCFA.' },
-  { icon: FileText, title: 'Génération PDF', desc: 'Générez des factures proforma professionnelles en PDF en un clic.' },
-  { icon: Zap, title: 'Ultra rapide', desc: "Interface fluide pour créer vos proformas en moins d'une minute." },
-  { icon: MessageCircle, title: 'Partage WhatsApp', desc: 'Envoyez vos factures directement via WhatsApp en un tap.' },
-  { icon: Clock, title: 'Historique complet', desc: 'Retrouvez toutes vos proformas avec statuts et suivi intégré.' },
+  { Icon: Users2, title: 'Gestion des clients', desc: 'Ajoutez et organisez vos clients avec toutes leurs informations en un seul endroit.' },
+  { Icon: LayoutGrid, title: 'Catalogue produits', desc: 'Créez votre catalogue avec prix unitaires prédéfinis en FCFA.' },
+  { Icon: FileDown, title: 'Génération PDF', desc: 'Générez des factures proforma professionnelles en PDF en un clic.' },
+  { Icon: Zap, title: 'Ultra rapide', desc: "Interface fluide pour créer vos proformas en moins d'une minute." },
+  { Icon: Send, title: 'Partage WhatsApp', desc: 'Envoyez vos factures directement via WhatsApp en un tap.' },
+  { Icon: ClipboardList, title: 'Historique complet', desc: 'Retrouvez toutes vos proformas avec statuts et suivi intégré.' },
 ];
 
 const testimonials = [
@@ -120,9 +120,12 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((f, i) => (
               <motion.div key={f.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}>
-                <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 h-full transition-all duration-200 hover:border-[#C7D2FE] hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(99,102,241,0.1)]">
-                  <div className="w-12 h-12 rounded-xl bg-[#EEF2FF] flex items-center justify-center mb-5">
-                    <f.icon className="h-6 w-6 text-[#6366F1]" />
+                <div className="group bg-white border border-[#E5E7EB] rounded-2xl p-6 h-full transition-all duration-[250ms] ease-out hover:border-[#C7D2FE] hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)]">
+                  <div
+                    className="mb-5 flex items-center justify-center transition-colors duration-[250ms] ease-out group-hover:bg-[#E0E7FF]"
+                    style={{ width: 48, height: 48, borderRadius: 12, padding: 12, background: '#EEF2FF' }}
+                  >
+                    <f.Icon size={24} color="#6366F1" />
                   </div>
                   <h3 className="font-display text-xl font-bold mb-2 text-[#0F172A]">{f.title}</h3>
                   <p className="text-[#6B7280] text-sm leading-relaxed">{f.desc}</p>
