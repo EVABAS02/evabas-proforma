@@ -1,0 +1,8 @@
+ALTER TABLE public.invoices
+ADD COLUMN IF NOT EXISTS apply_tva boolean NOT NULL DEFAULT false,
+ADD COLUMN IF NOT EXISTS apply_mtcc boolean NOT NULL DEFAULT false,
+ADD COLUMN IF NOT EXISTS apply_tcc boolean NOT NULL DEFAULT false,
+ADD COLUMN IF NOT EXISTS montant_ht numeric NOT NULL DEFAULT 0,
+ADD COLUMN IF NOT EXISTS montant_tva numeric NOT NULL DEFAULT 0,
+ADD COLUMN IF NOT EXISTS montant_mtcc numeric NOT NULL DEFAULT 0,
+ADD COLUMN IF NOT EXISTS montant_tcc numeric NOT NULL DEFAULT 0;

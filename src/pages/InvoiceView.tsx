@@ -46,28 +46,36 @@ export default function InvoiceView() {
     }
   };
 
-  const shareWhatsApp = () => {
-    const phone = (invoice.client_phone || '').replace(/\D/g, '');
-    const text = encodeURIComponent(
-      `Bonjour ${invoice.client_name || ''},\n\nVeuillez trouver votre facture proforma ${invoice.invoice_number} d'un montant de ${formatFCFA(Number(invoice.total_ttc))}.\n\nCordialement,\n${profile?.company_name || ''}`
+  const handleWhatsAppShare = () => {
+    const invoiceNumber = invoice.invoice_number || 'FP-2026-0001';
+    const clientName = invoice.client_name || 'Client';
+    const total = Number(invoice.total_ttc || 0).toLocaleString('fr-FR');
+
+    const message = encodeURIComponent(
+      `Bonjour,\n\nVeuillez trouver ci-joint notre facture proforma.\n\n` +
+      `📋 Facture : ${invoiceNumber}\n` +
+      `👤 Client : ${clientName}\n` +
+      `💰 Montant TTC : ${total} FCFA\n\n` +
+      `Merci pour votre confiance.\n` +
+      `— ${profile?.company_name || 'Notre entreprise'}`
     );
-    const url = phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
-    window.open(url, '_blank');
+
+    window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
   if (!invoice) return <AppLayout><div className="text-muted-foreground">Chargement...</div></AppLayout>;
 
   const company = profile?.company_name || 'Mon Entreprise';
   const companyLine = [profile?.company_address, profile?.company_city].filter(Boolean).join(', ');
-  const totalHT = items.reduce((s, it) => s + Number(it.total || it.quantity * it.unit_price), 0);
+  const itemsHT = items.reduce((s, it) => s + Number(it.total || it.quantity * it.unit_price), 0);
+  const totalHT = Number((invoice as any).montant_ht) || itemsHT;
   const ttc = Number(invoice.total_ttc) || 0;
-  // Reverse-engineer tax components for display: difference between TTC and HT split between TVA and MTCC.
-  const taxDelta = Math.max(0, ttc - totalHT);
-  // If both taxes applied (typical case): TVA=18% HT, MTCC=1% HT.
-  const tva = Math.round(totalHT * 0.18);
-  const mtcc = Math.round(totalHT * 0.01);
-  const hasTVA = Math.abs(taxDelta - (tva + mtcc)) < 2 || taxDelta >= tva;
-  const hasMTCC = taxDelta > tva || Math.abs(taxDelta - (tva + mtcc)) < 2;
+  const hasTVA = !!(invoice as any).apply_tva;
+  const hasMTCC = !!(invoice as any).apply_mtcc;
+  const hasTCC = !!(invoice as any).apply_tcc;
+  const tva = Number((invoice as any).montant_tva) || (hasTVA ? Math.round(totalHT * 0.18) : 0);
+  const mtcc = Number((invoice as any).montant_mtcc) || (hasMTCC ? Math.round(totalHT * 0.01) : 0);
+  const tcc = Number((invoice as any).montant_tcc) || (hasTCC ? Math.round(totalHT * 0.01) : 0);
 
   return (
     <AppLayout>
@@ -80,7 +88,7 @@ export default function InvoiceView() {
             <Link to={`/factures/${id}/modifier`}><Button variant="outline" size="sm" className="w-full"><Pencil className="h-4 w-4 mr-2" />Modifier</Button></Link>
             <Button onClick={downloadPDF} size="sm" className="bg-accent hover:bg-accent/90"><Download className="h-4 w-4 mr-2" />PDF</Button>
             <Button onClick={() => window.print()} variant="outline" size="sm"><Printer className="h-4 w-4 mr-2" />Imprimer</Button>
-            <Button onClick={shareWhatsApp} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white"><MessageCircle className="h-4 w-4 mr-2" />WhatsApp</Button>
+            <Button onClick={handleWhatsAppShare} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white"><MessageCircle className="h-4 w-4 mr-2" />WhatsApp</Button>
           </div>
         </div>
 
@@ -139,6 +147,7 @@ export default function InvoiceView() {
               <div className="flex justify-between py-1"><span className="text-muted-foreground">Montant HT</span><span className="tabular-nums font-medium">{formatFCFA(totalHT)}</span></div>
               {hasTVA && <div className="flex justify-between py-1"><span className="text-muted-foreground">TVA (18%)</span><span className="tabular-nums">{formatFCFA(tva)}</span></div>}
               {hasMTCC && <div className="flex justify-between py-1"><span className="text-muted-foreground">MTCC (1%)</span><span className="tabular-nums">{formatFCFA(mtcc)}</span></div>}
+              {hasTCC && <div className="flex justify-between py-1"><span className="text-muted-foreground">TCC (1%)</span><span className="tabular-nums">{formatFCFA(tcc)}</span></div>}
               <div className="flex justify-between items-center pt-3 border-t-2 border-primary/30">
                 <span className="font-display font-bold text-base">Total TTC</span>
                 <span className="font-display font-bold text-2xl tabular-nums" style={{ color: '#6366F1' }}>{formatFCFA(ttc)}</span>

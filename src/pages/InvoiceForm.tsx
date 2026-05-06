@@ -29,8 +29,9 @@ export default function InvoiceForm() {
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [status, setStatus] = useState<'brouillon' | 'envoyee' | 'payee'>('brouillon');
   const [items, setItems] = useState<Item[]>([{ product_id: null, designation: '', quantity: 1, unit_price: 0 }]);
-  const [applyTVA, setApplyTVA] = useState(true);
-  const [applyMTCC, setApplyMTCC] = useState(true);
+  const [applyTVA, setApplyTVA] = useState(false);
+  const [applyMTCC, setApplyMTCC] = useState(false);
+  const [applyTCC, setApplyTCC] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const { data: clients = [] } = useQuery({
@@ -61,6 +62,9 @@ export default function InvoiceForm() {
       }
       setDate(inv.date);
       setStatus(inv.status);
+      setApplyTVA(!!(inv as any).apply_tva);
+      setApplyMTCC(!!(inv as any).apply_mtcc);
+      setApplyTCC(!!(inv as any).apply_tcc);
       const { data: its } = await supabase.from('invoice_items').select('*').eq('invoice_id', id!).order('position');
       setItems((its || []).map(it => ({ id: it.id, product_id: it.product_id, designation: it.designation, quantity: it.quantity, unit_price: it.unit_price, manual: !it.product_id })));
     })();
@@ -69,7 +73,8 @@ export default function InvoiceForm() {
   const totalHT = items.reduce((s, it) => s + it.quantity * it.unit_price, 0);
   const tva = applyTVA ? totalHT * 0.18 : 0;
   const mtcc = applyMTCC ? totalHT * 0.01 : 0;
-  const totalTTC = totalHT + tva + mtcc;
+  const tcc = applyTCC ? totalHT * 0.01 : 0;
+  const totalTTC = totalHT + tva + mtcc + tcc;
 
   const addItem = () => setItems([...items, { product_id: null, designation: '', quantity: 1, unit_price: 0, manual: false }]);
   const addManualItem = () => setItems([...items, { product_id: null, designation: '', quantity: 1, unit_price: 0, manual: true }]);
@@ -103,7 +108,14 @@ export default function InvoiceForm() {
         client_phone: client?.phone || null,
         client_email: client?.email || null,
         client_ifu: client?.ifu || null,
-      };
+        apply_tva: applyTVA,
+        apply_mtcc: applyMTCC,
+        apply_tcc: applyTCC,
+        montant_ht: Math.round(totalHT),
+        montant_tva: Math.round(tva),
+        montant_mtcc: Math.round(mtcc),
+        montant_tcc: Math.round(tcc),
+      } as any;
       let invoiceId = id!;
       if (editing) {
         const { error } = await supabase.from('invoices').update(payload).eq('id', id!);
@@ -240,20 +252,28 @@ export default function InvoiceForm() {
                 ))}
               </div>
               <div className="flex flex-col md:flex-row justify-between gap-6 mt-6 pt-4 border-t">
-                <div className="space-y-3">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox checked={applyTVA} onCheckedChange={(v) => setApplyTVA(!!v)} />
-                    Appliquer TVA 18%
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox checked={applyMTCC} onCheckedChange={(v) => setApplyMTCC(!!v)} />
-                    Appliquer MTCC 1%
-                  </label>
+                <div>
+                  <p className="text-[13px] uppercase tracking-wide text-[#6B7280] mb-3 font-semibold">Taxes applicables</p>
+                  <div className="flex flex-col gap-[10px]">
+                    <label className="flex items-center gap-2 text-[14px] text-[#374151] cursor-pointer">
+                      <Checkbox checked={applyTVA} onCheckedChange={(v) => setApplyTVA(!!v)} className="border-[#D1D5DB] data-[state=checked]:bg-[#6366F1] data-[state=checked]:border-[#6366F1] data-[state=checked]:text-white" />
+                      Appliquer TVA (18%)
+                    </label>
+                    <label className="flex items-center gap-2 text-[14px] text-[#374151] cursor-pointer">
+                      <Checkbox checked={applyMTCC} onCheckedChange={(v) => setApplyMTCC(!!v)} className="border-[#D1D5DB] data-[state=checked]:bg-[#6366F1] data-[state=checked]:border-[#6366F1] data-[state=checked]:text-white" />
+                      Appliquer MTCC (1%)
+                    </label>
+                    <label className="flex items-center gap-2 text-[14px] text-[#374151] cursor-pointer">
+                      <Checkbox checked={applyTCC} onCheckedChange={(v) => setApplyTCC(!!v)} className="border-[#D1D5DB] data-[state=checked]:bg-[#6366F1] data-[state=checked]:border-[#6366F1] data-[state=checked]:text-white" />
+                      Appliquer TCC (1%)
+                    </label>
+                  </div>
                 </div>
                 <div className="min-w-[260px] space-y-1.5 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">Montant HT</span><span className="tabular-nums font-medium">{formatFCFA(totalHT)}</span></div>
                   {applyTVA && <div className="flex justify-between"><span className="text-muted-foreground">TVA (18%)</span><span className="tabular-nums">{formatFCFA(tva)}</span></div>}
                   {applyMTCC && <div className="flex justify-between"><span className="text-muted-foreground">MTCC (1%)</span><span className="tabular-nums">{formatFCFA(mtcc)}</span></div>}
+                  {applyTCC && <div className="flex justify-between"><span className="text-muted-foreground">TCC (1%)</span><span className="tabular-nums">{formatFCFA(tcc)}</span></div>}
                   <div className="flex justify-between pt-2 border-t mt-2">
                     <span className="font-display font-bold">Total TTC</span>
                     <span className="font-display font-bold text-lg tabular-nums" style={{ color: '#6366F1' }}>{formatFCFA(totalTTC)}</span>
