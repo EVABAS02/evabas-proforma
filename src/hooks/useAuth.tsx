@@ -16,9 +16,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const ensureProfile = async (userId: string, email: string | undefined) => {
+      try {
+        const { data: existing } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+        if (!existing) {
+          await supabase.from('profiles').insert({
+            id: userId,
+            company_name: 'Mon Entreprise',
+            email: email ?? null,
+          });
+        }
+      } catch (err) {
+        console.error('ensureProfile error', err);
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setLoading(false);
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Defer to avoid deadlock with Supabase auth callback
+        setTimeout(() => ensureProfile(session.user.id, session.user.email), 0);
+      }
     });
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
