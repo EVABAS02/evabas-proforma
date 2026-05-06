@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { lovable } from '@/integrations/lovable/index';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Logo } from '@/components/Logo';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
@@ -51,17 +49,49 @@ export default function Auth() {
     }
   };
 
-  const oauth = async () => {
-    const result = await lovable.auth.signInWithOAuth('google', { redirect_uri: `${window.location.origin}/dashboard` });
-    if (result.error) toast.error("Erreur d'authentification");
-    if (result.redirected) return;
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + '/dashboard',
+      },
+    });
+    if (error) {
+      console.error('Google login error:', error);
+      toast.error("Erreur d'authentification Google");
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.error("Entrez d'abord votre email");
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Email de réinitialisation envoyé !');
+    }
   };
 
   return (
     <div className="min-h-screen bg-stars flex items-center justify-center p-4 py-8 sm:py-12">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-[90%] sm:w-full max-w-[480px]">
+        <div className="mb-4 flex justify-center">
+          <Link to="/" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm transition-colors">
+            <ArrowLeft className="h-4 w-4" /> Retour à l'accueil
+          </Link>
+        </div>
         <div className="glass rounded-2xl p-6 sm:p-8 shadow-2xl">
-          <div className="flex justify-center mb-6"><Logo dark size="lg" /></div>
+          <div className="flex justify-center mb-5">
+            <div className="flex items-baseline" style={{ letterSpacing: '1px', fontSize: 16 }}>
+              <span style={{ fontWeight: 400, color: '#94A3B8' }}>Eva</span>
+              <span style={{ fontWeight: 700, color: '#FFFFFF' }}>BAS</span>
+            </div>
+          </div>
           <h1 className="text-center text-white font-display text-xl sm:text-2xl font-bold mb-1">
             {isSignUp ? 'Créez votre compte' : 'Connectez-vous à votre compte'}
           </h1>
@@ -92,7 +122,11 @@ export default function Auth() {
             <div>
               <div className="flex items-center justify-between">
                 <Label className="text-white/80 text-xs">Mot de passe</Label>
-                {!isSignUp && <a href="#" className="text-xs text-accent hover:underline">Mot de passe oublié ?</a>}
+                {!isSignUp && (
+                  <button type="button" onClick={handleForgotPassword} className="text-xs text-accent hover:underline">
+                    Mot de passe oublié ?
+                  </button>
+                )}
               </div>
               <div className="relative">
                 <Input type={showPwd ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
@@ -121,7 +155,7 @@ export default function Auth() {
           </div>
 
           <div className="space-y-2">
-            <Button type="button" variant="outline" onClick={oauth}
+            <Button type="button" variant="outline" onClick={handleGoogleLogin}
               className="w-full h-11 rounded-lg bg-transparent border-white/15 text-white hover:bg-white/10 hover:text-white">
               Continuer avec Google
             </Button>
