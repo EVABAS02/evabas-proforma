@@ -100,6 +100,9 @@ export type Database = {
       }
       invoices: {
         Row: {
+          apply_mtcc: boolean
+          apply_tcc: boolean
+          apply_tva: boolean
           client_address: string | null
           client_email: string | null
           client_id: string | null
@@ -110,6 +113,10 @@ export type Database = {
           date: string
           id: string
           invoice_number: string
+          montant_ht: number
+          montant_mtcc: number
+          montant_tcc: number
+          montant_tva: number
           notes: string | null
           status: Database["public"]["Enums"]["invoice_status"]
           total_ttc: number
@@ -117,6 +124,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          apply_mtcc?: boolean
+          apply_tcc?: boolean
+          apply_tva?: boolean
           client_address?: string | null
           client_email?: string | null
           client_id?: string | null
@@ -127,6 +137,10 @@ export type Database = {
           date?: string
           id?: string
           invoice_number: string
+          montant_ht?: number
+          montant_mtcc?: number
+          montant_tcc?: number
+          montant_tva?: number
           notes?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
           total_ttc?: number
@@ -134,6 +148,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          apply_mtcc?: boolean
+          apply_tcc?: boolean
+          apply_tva?: boolean
           client_address?: string | null
           client_email?: string | null
           client_id?: string | null
@@ -144,6 +161,10 @@ export type Database = {
           date?: string
           id?: string
           invoice_number?: string
+          montant_ht?: number
+          montant_mtcc?: number
+          montant_tcc?: number
+          montant_tva?: number
           notes?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
           total_ttc?: number
