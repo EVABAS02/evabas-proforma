@@ -32,6 +32,8 @@ export default function InvoiceView() {
   const downloadPDF = async () => {
     if (!printRef.current) return;
     toast.loading('Génération du PDF...', { id: 'pdf' });
+    const originalTitle = document.title;
+    document.title = invoice.invoice_number;
     try {
       const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: '#ffffff' });
       const img = canvas.toDataURL('image/jpeg', 0.95);
@@ -43,7 +45,18 @@ export default function InvoiceView() {
       toast.success('PDF téléchargé', { id: 'pdf' });
     } catch (e: any) {
       toast.error('Erreur PDF', { id: 'pdf' });
+    } finally {
+      document.title = originalTitle;
     }
+  };
+
+  const handlePrint = () => {
+    const originalTitle = document.title;
+    document.title = invoice.invoice_number;
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => { document.title = originalTitle; }, 500);
+    }, 50);
   };
 
   const handleWhatsAppShare = () => {
@@ -87,12 +100,12 @@ export default function InvoiceView() {
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
             <Link to={`/factures/${id}/modifier`}><Button variant="outline" size="sm" className="w-full"><Pencil className="h-4 w-4 mr-2" />Modifier</Button></Link>
             <Button onClick={downloadPDF} size="sm" className="bg-accent hover:bg-accent/90"><Download className="h-4 w-4 mr-2" />PDF</Button>
-            <Button onClick={() => window.print()} variant="outline" size="sm"><Printer className="h-4 w-4 mr-2" />Imprimer</Button>
+            <Button onClick={handlePrint} variant="outline" size="sm"><Printer className="h-4 w-4 mr-2" />Imprimer</Button>
             <Button onClick={handleWhatsAppShare} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white"><MessageCircle className="h-4 w-4 mr-2" />WhatsApp</Button>
           </div>
         </div>
 
-        <div ref={printRef} className="bg-white rounded-xl shadow-card p-5 sm:p-10 print:shadow-none print:rounded-none print:p-0 text-[12px] sm:text-sm">
+        <div ref={printRef} className="bg-white rounded-xl shadow-card p-4 sm:p-10 print:shadow-none print:rounded-none print:p-0 text-[12px] sm:text-sm">
           {/* HEADER */}
           <div className="flex justify-between items-start pb-6 border-b-2 border-primary/20">
             <div>
@@ -118,13 +131,13 @@ export default function InvoiceView() {
           </div>
 
           {/* ITEMS */}
-          <table className="w-full text-sm border-collapse">
+          <table className="w-full text-sm border-collapse mt-2">
             <thead>
-              <tr className="bg-primary text-white">
+              <tr style={{ background: '#f5f5f5', color: '#1a1a2e', borderBottom: '2px solid #e0e0e0' }}>
                 <th className="text-left p-3 font-semibold">N°</th>
                 <th className="text-left p-3 font-semibold">Désignation</th>
                 <th className="text-right p-3 font-semibold">Qté</th>
-                <th className="text-right p-3 font-semibold">Prix Unitaire (FCFA)</th>
+                <th className="text-right p-3 font-semibold">PU (FCFA)</th>
                 <th className="text-right p-3 font-semibold">Montant (FCFA)</th>
               </tr>
             </thead>
@@ -149,8 +162,8 @@ export default function InvoiceView() {
               {hasMTCC && <div className="flex justify-between py-1"><span className="text-muted-foreground">MTCC (1%)</span><span className="tabular-nums">{formatFCFA(mtcc)}</span></div>}
               {hasTCC && <div className="flex justify-between py-1"><span className="text-muted-foreground">TCC (1%)</span><span className="tabular-nums">{formatFCFA(tcc)}</span></div>}
               <div className="flex justify-between items-center pt-3 border-t-2 border-primary/30">
-                <span className="font-display font-bold text-base">Total TTC</span>
-                <span className="font-display font-bold text-2xl tabular-nums" style={{ color: '#6366F1' }}>{formatFCFA(ttc)}</span>
+                <span className="font-display font-bold text-base sm:text-lg">Total TTC</span>
+                <span className="font-display font-bold text-2xl sm:text-3xl tabular-nums" style={{ color: '#6366F1' }}>{formatFCFA(ttc)}</span>
               </div>
             </div>
           </div>
