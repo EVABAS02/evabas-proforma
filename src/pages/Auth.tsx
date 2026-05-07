@@ -49,19 +49,6 @@ export default function Auth() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin + '/dashboard',
-      },
-    });
-    if (error) {
-      console.error('Google login error:', error);
-      toast.error("Erreur d'authentification Google");
-    }
-  };
-
   const handleForgotPassword = async () => {
     if (!email) {
       toast.error("Entrez d'abord votre email");
@@ -80,11 +67,6 @@ export default function Auth() {
   return (
     <div className="min-h-screen bg-stars flex items-center justify-center p-4 py-8 sm:py-12">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-[90%] sm:w-full max-w-[480px]">
-        <div className="mb-4 flex justify-center">
-          <Link to="/" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm transition-colors">
-            <ArrowLeft className="h-4 w-4" /> Retour à l'accueil
-          </Link>
-        </div>
         <div className="glass rounded-2xl p-6 sm:p-8 shadow-2xl">
           <div className="flex justify-center mb-5">
             <div className="flex items-baseline" style={{ letterSpacing: '1px', fontSize: 16 }}>
@@ -148,25 +130,17 @@ export default function Auth() {
             </Button>
           </form>
 
-          <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-xs text-white/40">ou</span>
-            <div className="flex-1 h-px bg-white/10" />
-          </div>
-
-          <div className="space-y-2">
-            <Button type="button" variant="outline" onClick={handleGoogleLogin}
-              className="w-full h-11 rounded-lg bg-transparent border-white/15 text-white hover:bg-white/10 hover:text-white">
-              Continuer avec Google
-            </Button>
-          </div>
-
           <p className="text-center text-sm text-white/60 mt-6">
             {isSignUp ? 'Déjà un compte ?' : 'Pas encore de compte ?'}{' '}
             <button onClick={() => setIsSignUp(!isSignUp)} className="text-accent font-semibold hover:underline">
               {isSignUp ? 'Se connecter' : "S'inscrire"}
             </button>
           </p>
+          <div className="mt-4 text-center">
+            <Link to="/" className="inline-flex items-center gap-1 text-xs text-white/40 hover:text-white/70 transition-colors">
+              <ArrowLeft className="h-3 w-3" /> Retour à l'accueil
+            </Link>
+          </div>
         </div>
       </motion.div>
     </div>
