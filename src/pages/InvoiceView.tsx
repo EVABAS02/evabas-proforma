@@ -109,29 +109,29 @@ export default function InvoiceView() {
           </div>
         </div>
 
-        <div ref={printRef} className="bg-white rounded-xl shadow-card p-4 sm:p-10 print:shadow-none print:rounded-none print:p-0 text-[12px] sm:text-sm">
+        <div ref={printRef} className="bg-white rounded-xl shadow-card p-4 sm:p-10 print:shadow-none print:rounded-none print:p-0 text-[12px] sm:text-sm" style={{ color: '#000000' }}>
           {/* HEADER */}
-          <div className="flex justify-between items-start pb-6 border-b-2 border-primary/20">
+          <div className="flex justify-between items-start pb-6 border-b-2 border-primary/20" style={{ color: '#000000' }}>
             <div>
-              <h2 className="font-display text-2xl font-bold text-foreground">{company}</h2>
-              {companyLine && <p className="text-sm text-muted-foreground mt-1">{companyLine}</p>}
-              {profile?.phone_whatsapp && <p className="text-sm text-muted-foreground">Tél : {profile.phone_whatsapp}</p>}
-              {profile?.email && <p className="text-sm text-muted-foreground">{profile.email}</p>}
+              <h2 className="font-display text-2xl font-bold" style={{ color: '#000000' }}>{company}</h2>
+              {companyLine && <p className="text-sm mt-1" style={{ color: '#000000' }}>{companyLine}</p>}
+              {profile?.phone_whatsapp && <p className="text-sm" style={{ color: '#000000' }}>Tél : {profile.phone_whatsapp}</p>}
+              {profile?.email && <p className="text-sm" style={{ color: '#000000' }}>{profile.email}</p>}
             </div>
             <div className="text-right">
-              <span style={{ color: '#4f46e5', fontSize: '11px', letterSpacing: '2px' }} className="font-bold uppercase block">Facture Proforma</span>
-              <p className="font-mono text-lg font-bold mt-2">{invoice.invoice_number}</p>
-              <p className="text-sm text-muted-foreground mt-1">Date : {formatDate(invoice.date)}</p>
+              <span style={{ color: '#000000', fontSize: '11px', letterSpacing: '2px', fontWeight: 600 }} className="uppercase block">Facture Proforma</span>
+              <p className="font-mono text-lg font-bold mt-2" style={{ color: '#000000' }}>{invoice.invoice_number}</p>
+              <p className="text-sm mt-1" style={{ color: '#000000' }}>Date : {formatDate(invoice.date)}</p>
             </div>
           </div>
 
           {/* CLIENT */}
           <div className="my-6">
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#C9A84C' }}>Client</p>
-            <p className="font-bold text-lg">{invoice.client_name || '—'}</p>
-            {invoice.client_address && <p className="text-sm text-muted-foreground">{invoice.client_address}</p>}
-            {invoice.client_phone && <p className="text-sm text-muted-foreground">Tél : {invoice.client_phone}</p>}
-            {invoice.client_ifu && <p className="text-sm text-muted-foreground">IFU : {invoice.client_ifu}</p>}
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#000000' }}>Client</p>
+            <p className="font-bold text-lg" style={{ color: '#000000' }}>{invoice.client_name || '—'}</p>
+            {invoice.client_address && <p className="text-sm" style={{ color: '#000000' }}>{invoice.client_address}</p>}
+            {invoice.client_phone && <p className="text-sm" style={{ color: '#000000' }}>Tél : {invoice.client_phone}</p>}
+            {invoice.client_ifu && <p className="text-sm" style={{ color: '#000000' }}>IFU : {invoice.client_ifu}</p>}
           </div>
 
           {/* ITEMS */}
@@ -144,22 +144,22 @@ export default function InvoiceView() {
               <col style={{ width: '23%' }} />
             </colgroup>
             <thead>
-              <tr style={{ background: '#f5f5f5', color: '#1a1a2e', borderBottom: '2px solid #e0e0e0' }}>
-                <th className="text-left p-3 font-semibold" style={{ overflow: 'hidden' }}>N°</th>
-                <th className="text-left p-3 font-semibold" style={{ overflow: 'hidden' }}>Désignation</th>
-                <th className="text-right p-3 font-semibold" style={{ overflow: 'hidden' }}>Qté</th>
-                <th className="text-right p-3 font-semibold" style={{ overflow: 'hidden' }}>PU (FCFA)</th>
-                <th className="text-right p-3 font-semibold" style={{ overflow: 'hidden' }}>Montant (FCFA)</th>
+              <tr style={{ background: '#f0f0f0', color: '#000000', borderBottom: '2px solid #e0e0e0' }}>
+                <th className="text-left p-3" style={{ overflow: 'hidden', color: '#000000', fontWeight: 600 }}>N°</th>
+                <th className="text-left p-3" style={{ overflow: 'hidden', color: '#000000', fontWeight: 600 }}>Désignation</th>
+                <th className="text-right p-3" style={{ overflow: 'hidden', color: '#000000', fontWeight: 600 }}>Qté</th>
+                <th className="text-right p-3" style={{ overflow: 'hidden', color: '#000000', fontWeight: 600 }}>PU (FCFA)</th>
+                <th className="text-right p-3" style={{ overflow: 'hidden', color: '#000000', fontWeight: 600 }}>Montant (FCFA)</th>
               </tr>
             </thead>
             <tbody>
               {items.map((it, i) => (
                 <tr key={it.id} className="border-b border-border">
-                  <td className="p-3" style={{ overflow: 'hidden' }}>{i + 1}</td>
-                  <td className="p-3" style={{ overflow: 'hidden' }}>{it.designation}</td>
-                  <td className="p-3 text-right tabular-nums" style={{ overflow: 'hidden' }}>{it.quantity}</td>
-                  <td className="p-3 text-right tabular-nums" style={{ overflow: 'hidden' }}>{new Intl.NumberFormat('fr-FR').format(it.unit_price)}</td>
-                  <td className="p-3 text-right tabular-nums font-medium" style={{ overflow: 'hidden' }}>{new Intl.NumberFormat('fr-FR').format(it.total)}</td>
+                  <td className="p-3" style={{ overflow: 'hidden', color: '#000000' }}>{i + 1}</td>
+                  <td className="p-3" style={{ overflow: 'hidden', color: '#000000' }}>{it.designation}</td>
+                  <td className="p-3 text-right tabular-nums" style={{ overflow: 'hidden', color: '#000000' }}>{it.quantity}</td>
+                  <td className="p-3 text-right tabular-nums" style={{ overflow: 'hidden', color: '#000000' }}>{new Intl.NumberFormat('fr-FR').format(it.unit_price)}</td>
+                  <td className="p-3 text-right tabular-nums font-medium" style={{ overflow: 'hidden', color: '#000000' }}>{new Intl.NumberFormat('fr-FR').format(it.total)}</td>
                 </tr>
               ))}
             </tbody>
@@ -167,19 +167,19 @@ export default function InvoiceView() {
 
           {/* TOTALS */}
           <div className="flex justify-end mt-6">
-            <div className="min-w-[300px] space-y-1.5 text-sm">
-              <div className="flex justify-between py-1"><span className="text-muted-foreground">Montant HT</span><span className="tabular-nums font-medium">{formatFCFA(totalHT)}</span></div>
-              {hasTVA && <div className="flex justify-between py-1"><span className="text-muted-foreground">TVA (18%)</span><span className="tabular-nums">{formatFCFA(tva)}</span></div>}
-              {hasMTCC && <div className="flex justify-between py-1"><span className="text-muted-foreground">MTCC (1%)</span><span className="tabular-nums">{formatFCFA(mtcc)}</span></div>}
-              {hasTCC && <div className="flex justify-between py-1"><span className="text-muted-foreground">TCC (1%)</span><span className="tabular-nums">{formatFCFA(tcc)}</span></div>}
+            <div className="min-w-[300px] space-y-1.5 text-sm" style={{ color: '#000000' }}>
+              <div className="flex justify-between py-1"><span style={{ color: '#000000' }}>Montant HT</span><span className="tabular-nums font-medium" style={{ color: '#000000' }}>{formatFCFA(totalHT)}</span></div>
+              {hasTVA && <div className="flex justify-between py-1"><span style={{ color: '#000000' }}>TVA (18%)</span><span className="tabular-nums" style={{ color: '#000000' }}>{formatFCFA(tva)}</span></div>}
+              {hasMTCC && <div className="flex justify-between py-1"><span style={{ color: '#000000' }}>MTCC (1%)</span><span className="tabular-nums" style={{ color: '#000000' }}>{formatFCFA(mtcc)}</span></div>}
+              {hasTCC && <div className="flex justify-between py-1"><span style={{ color: '#000000' }}>TCC (1%)</span><span className="tabular-nums" style={{ color: '#000000' }}>{formatFCFA(tcc)}</span></div>}
               <div className="flex justify-between items-center pt-3 border-t-2 border-primary/30">
-                <span className="font-display font-bold text-base sm:text-lg" style={{ whiteSpace: 'nowrap' }}>Total TTC</span>
-                <span className="font-display font-bold tabular-nums" style={{ color: '#6366F1', whiteSpace: 'nowrap', fontSize: '22px' }}>{formatFCFA(ttc)}</span>
+                <span className="font-display" style={{ whiteSpace: 'nowrap', color: '#000000', fontWeight: 700, fontSize: '16px' }}>Total TTC</span>
+                <span className="font-display tabular-nums" style={{ color: '#000000', whiteSpace: 'nowrap', fontSize: '22px', fontWeight: 700 }}>{formatFCFA(ttc)}</span>
               </div>
             </div>
           </div>
 
-          <p className="text-center text-sm text-muted-foreground italic mt-10 pt-6 border-t">
+          <p className="text-center text-sm italic mt-10 pt-6 border-t" style={{ color: '#000000' }}>
             {company}{profile?.company_city ? ` — ${profile.company_city}` : ''} · Merci pour votre confiance
           </p>
         </div>
