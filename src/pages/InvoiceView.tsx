@@ -34,6 +34,9 @@ export default function InvoiceView() {
     toast.loading('Génération du PDF...', { id: 'pdf' });
     const originalTitle = document.title;
     document.title = invoice.invoice_number;
+    const el = printRef.current;
+    const originalWidth = el.style.width;
+    el.style.width = '794px';
     try {
       const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: '#ffffff' });
       const img = canvas.toDataURL('image/jpeg', 0.95);
@@ -46,6 +49,7 @@ export default function InvoiceView() {
     } catch (e: any) {
       toast.error('Erreur PDF', { id: 'pdf' });
     } finally {
+      el.style.width = originalWidth;
       document.title = originalTitle;
     }
   };
@@ -115,7 +119,7 @@ export default function InvoiceView() {
               {profile?.email && <p className="text-sm text-muted-foreground">{profile.email}</p>}
             </div>
             <div className="text-right">
-              <span className="inline-block bg-primary text-white text-xs font-bold tracking-[0.2em] uppercase px-3 py-1.5 rounded-full">Facture Proforma</span>
+              <span style={{ color: '#4f46e5', fontSize: '11px', letterSpacing: '2px' }} className="font-bold uppercase block">Facture Proforma</span>
               <p className="font-mono text-lg font-bold mt-2">{invoice.invoice_number}</p>
               <p className="text-sm text-muted-foreground mt-1">Date : {formatDate(invoice.date)}</p>
             </div>
@@ -131,24 +135,31 @@ export default function InvoiceView() {
           </div>
 
           {/* ITEMS */}
-          <table className="w-full text-sm border-collapse mt-2">
+          <table className="w-full border-collapse mt-2" style={{ tableLayout: 'fixed', fontSize: '12px' }}>
+            <colgroup>
+              <col style={{ width: '5%' }} />
+              <col style={{ width: '40%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '22%' }} />
+              <col style={{ width: '23%' }} />
+            </colgroup>
             <thead>
               <tr style={{ background: '#f5f5f5', color: '#1a1a2e', borderBottom: '2px solid #e0e0e0' }}>
-                <th className="text-left p-3 font-semibold">N°</th>
-                <th className="text-left p-3 font-semibold">Désignation</th>
-                <th className="text-right p-3 font-semibold">Qté</th>
-                <th className="text-right p-3 font-semibold">PU (FCFA)</th>
-                <th className="text-right p-3 font-semibold">Montant (FCFA)</th>
+                <th className="text-left p-3 font-semibold" style={{ overflow: 'hidden' }}>N°</th>
+                <th className="text-left p-3 font-semibold" style={{ overflow: 'hidden' }}>Désignation</th>
+                <th className="text-right p-3 font-semibold" style={{ overflow: 'hidden' }}>Qté</th>
+                <th className="text-right p-3 font-semibold" style={{ overflow: 'hidden' }}>PU (FCFA)</th>
+                <th className="text-right p-3 font-semibold" style={{ overflow: 'hidden' }}>Montant (FCFA)</th>
               </tr>
             </thead>
             <tbody>
               {items.map((it, i) => (
                 <tr key={it.id} className="border-b border-border">
-                  <td className="p-3">{i + 1}</td>
-                  <td className="p-3">{it.designation}</td>
-                  <td className="p-3 text-right tabular-nums">{it.quantity}</td>
-                  <td className="p-3 text-right tabular-nums">{new Intl.NumberFormat('fr-FR').format(it.unit_price)}</td>
-                  <td className="p-3 text-right tabular-nums font-medium">{new Intl.NumberFormat('fr-FR').format(it.total)}</td>
+                  <td className="p-3" style={{ overflow: 'hidden' }}>{i + 1}</td>
+                  <td className="p-3" style={{ overflow: 'hidden' }}>{it.designation}</td>
+                  <td className="p-3 text-right tabular-nums" style={{ overflow: 'hidden' }}>{it.quantity}</td>
+                  <td className="p-3 text-right tabular-nums" style={{ overflow: 'hidden' }}>{new Intl.NumberFormat('fr-FR').format(it.unit_price)}</td>
+                  <td className="p-3 text-right tabular-nums font-medium" style={{ overflow: 'hidden' }}>{new Intl.NumberFormat('fr-FR').format(it.total)}</td>
                 </tr>
               ))}
             </tbody>
@@ -162,8 +173,8 @@ export default function InvoiceView() {
               {hasMTCC && <div className="flex justify-between py-1"><span className="text-muted-foreground">MTCC (1%)</span><span className="tabular-nums">{formatFCFA(mtcc)}</span></div>}
               {hasTCC && <div className="flex justify-between py-1"><span className="text-muted-foreground">TCC (1%)</span><span className="tabular-nums">{formatFCFA(tcc)}</span></div>}
               <div className="flex justify-between items-center pt-3 border-t-2 border-primary/30">
-                <span className="font-display font-bold text-base sm:text-lg">Total TTC</span>
-                <span className="font-display font-bold text-2xl sm:text-3xl tabular-nums" style={{ color: '#6366F1' }}>{formatFCFA(ttc)}</span>
+                <span className="font-display font-bold text-base sm:text-lg" style={{ whiteSpace: 'nowrap' }}>Total TTC</span>
+                <span className="font-display font-bold tabular-nums" style={{ color: '#6366F1', whiteSpace: 'nowrap', fontSize: '22px' }}>{formatFCFA(ttc)}</span>
               </div>
             </div>
           </div>
