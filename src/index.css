@@ -109,5 +109,6 @@
 @media print {
   .no-print { display: none !important; }
   body { background: white !important; }
-  @page { size: A4; margin: 15mm; }
+  @page { size: A4; margin: 1.5cm; }
+  html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
