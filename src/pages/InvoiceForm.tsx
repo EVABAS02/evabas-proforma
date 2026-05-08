@@ -10,9 +10,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash2, ArrowLeft, PenLine } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Plus, Trash2, ArrowLeft, PenLine, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatFCFA } from '@/lib/format';
+import { useProfile } from '@/hooks/useProfile';
 
 type Item = { id?: string; product_id: string | null; designation: string; quantity: number; unit_price: number; manual?: boolean };
 
@@ -30,9 +33,18 @@ export default function InvoiceForm() {
   const [status, setStatus] = useState<'brouillon' | 'envoyee' | 'payee'>('brouillon');
   const [items, setItems] = useState<Item[]>([{ product_id: null, designation: '', quantity: 1, unit_price: 0 }]);
   const [applyTVA, setApplyTVA] = useState(false);
-  const [applyMTCC, setApplyMTCC] = useState(false);
-  const [applyTCC, setApplyTCC] = useState(false);
+  const [applyAIB, setApplyAIB] = useState(false);
+  const [aibRate, setAibRate] = useState<0.01 | 0.05>(0.01);
   const [loading, setLoading] = useState(false);
+  const { data: profile } = useProfile();
+  const regime = (profile as any)?.regime_fiscal as 'tva' | 'tps' | 'inconnu' | undefined;
+
+  // Apply smart defaults from regime when creating a new invoice
+  useEffect(() => {
+    if (editing) return;
+    if (regime === 'tva') setApplyTVA(true);
+    if (regime === 'tps') setApplyTVA(false);
+  }, [regime, editing]);
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
@@ -63,8 +75,9 @@ export default function InvoiceForm() {
       setDate(inv.date);
       setStatus(inv.status);
       setApplyTVA(!!(inv as any).apply_tva);
-      setApplyMTCC(!!(inv as any).apply_mtcc);
-      setApplyTCC(!!(inv as any).apply_tcc);
+      setApplyAIB(!!(inv as any).apply_aib);
+      const r = Number((inv as any).aib_rate);
+      setAibRate(r === 0.05 ? 0.05 : 0.01);
       const { data: its } = await supabase.from('invoice_items').select('*').eq('invoice_id', id!).order('position');
       setItems((its || []).map(it => ({ id: it.id, product_id: it.product_id, designation: it.designation, quantity: it.quantity, unit_price: it.unit_price, manual: !it.product_id })));
     })();
@@ -72,9 +85,8 @@ export default function InvoiceForm() {
 
   const totalHT = items.reduce((s, it) => s + it.quantity * it.unit_price, 0);
   const tva = applyTVA ? totalHT * 0.18 : 0;
-  const mtcc = applyMTCC ? totalHT * 0.01 : 0;
-  const tcc = applyTCC ? totalHT * 0.01 : 0;
-  const totalTTC = totalHT + tva + mtcc + tcc;
+  const aib = applyAIB ? totalHT * aibRate : 0;
+  const totalTTC = totalHT + tva + aib;
 
   const addItem = () => setItems([...items, { product_id: null, designation: '', quantity: 1, unit_price: 0, manual: false }]);
   const addManualItem = () => setItems([...items, { product_id: null, designation: '', quantity: 1, unit_price: 0, manual: true }]);
@@ -109,12 +121,15 @@ export default function InvoiceForm() {
         client_email: client?.email || null,
         client_ifu: client?.ifu || null,
         apply_tva: applyTVA,
-        apply_mtcc: applyMTCC,
-        apply_tcc: applyTCC,
+        apply_mtcc: false,
+        apply_tcc: false,
+        apply_aib: applyAIB,
+        aib_rate: aibRate,
         montant_ht: Math.round(totalHT),
         montant_tva: Math.round(tva),
-        montant_mtcc: Math.round(mtcc),
-        montant_tcc: Math.round(tcc),
+        montant_mtcc: 0,
+        montant_tcc: 0,
+        montant_aib: Math.round(aib),
       } as any;
       let invoiceId = id!;
       if (editing) {
