@@ -88,11 +88,10 @@ export default function InvoiceView() {
   const totalHT = Number((invoice as any).montant_ht) || itemsHT;
   const ttc = Number(invoice.total_ttc) || 0;
   const hasTVA = !!(invoice as any).apply_tva;
-  const hasMTCC = !!(invoice as any).apply_mtcc;
-  const hasTCC = !!(invoice as any).apply_tcc;
+  const hasAIB = !!(invoice as any).apply_aib;
+  const aibRate = Number((invoice as any).aib_rate) || 0.01;
   const tva = Number((invoice as any).montant_tva) || (hasTVA ? Math.round(totalHT * 0.18) : 0);
-  const mtcc = Number((invoice as any).montant_mtcc) || (hasMTCC ? Math.round(totalHT * 0.01) : 0);
-  const tcc = Number((invoice as any).montant_tcc) || (hasTCC ? Math.round(totalHT * 0.01) : 0);
+  const aib = Number((invoice as any).montant_aib) || (hasAIB ? Math.round(totalHT * aibRate) : 0);
 
   return (
     <AppLayout>
@@ -110,6 +109,8 @@ export default function InvoiceView() {
         </div>
 
         <div ref={printRef} className="bg-white rounded-xl shadow-card p-4 sm:p-10 print:shadow-none print:rounded-none print:p-0 text-[12px] sm:text-sm" style={{ color: '#000000' }}>
+          {/* Invoice number top-left corner */}
+          <p className="font-mono font-bold mb-3" style={{ color: '#000000', fontSize: '13px' }}>{invoice.invoice_number}</p>
           {/* HEADER */}
           <div className="flex justify-between items-start pb-6 border-b-2 border-primary/20" style={{ color: '#000000' }}>
             <div>
@@ -120,8 +121,7 @@ export default function InvoiceView() {
             </div>
             <div className="text-right">
               <span style={{ color: '#000000', fontSize: '11px', letterSpacing: '2px', fontWeight: 600 }} className="uppercase block">Facture Proforma</span>
-              <p className="font-mono text-lg font-bold mt-2" style={{ color: '#000000' }}>{invoice.invoice_number}</p>
-              <p className="text-sm mt-1" style={{ color: '#000000' }}>Date : {formatDate(invoice.date)}</p>
+              <p className="text-sm mt-2" style={{ color: '#000000' }}>Date : {formatDate(invoice.date)}</p>
             </div>
           </div>
 
@@ -170,8 +170,7 @@ export default function InvoiceView() {
             <div className="min-w-[300px] space-y-1.5 text-sm" style={{ color: '#000000' }}>
               <div className="flex justify-between py-1"><span style={{ color: '#000000' }}>Montant HT</span><span className="tabular-nums font-medium" style={{ color: '#000000' }}>{formatFCFA(totalHT)}</span></div>
               {hasTVA && <div className="flex justify-between py-1"><span style={{ color: '#000000' }}>TVA (18%)</span><span className="tabular-nums" style={{ color: '#000000' }}>{formatFCFA(tva)}</span></div>}
-              {hasMTCC && <div className="flex justify-between py-1"><span style={{ color: '#000000' }}>MTCC (1%)</span><span className="tabular-nums" style={{ color: '#000000' }}>{formatFCFA(mtcc)}</span></div>}
-              {hasTCC && <div className="flex justify-between py-1"><span style={{ color: '#000000' }}>TCC (1%)</span><span className="tabular-nums" style={{ color: '#000000' }}>{formatFCFA(tcc)}</span></div>}
+              {hasAIB && <div className="flex justify-between py-1"><span style={{ color: '#000000' }}>AIB ({aibRate === 0.05 ? '5' : '1'}%)</span><span className="tabular-nums" style={{ color: '#000000' }}>{formatFCFA(aib)}</span></div>}
               <div className="flex justify-between items-center pt-3 border-t-2 border-primary/30">
                 <span className="font-display" style={{ whiteSpace: 'nowrap', color: '#000000', fontWeight: 700, fontSize: '16px' }}>Total TTC</span>
                 <span className="font-display tabular-nums" style={{ color: '#000000', whiteSpace: 'nowrap', fontSize: '22px', fontWeight: 700 }}>{formatFCFA(ttc)}</span>
@@ -180,7 +179,7 @@ export default function InvoiceView() {
           </div>
 
           <p className="text-center text-sm italic mt-10 pt-6 border-t" style={{ color: '#000000' }}>
-            {company}{profile?.company_city ? ` — ${profile.company_city}` : ''} · Merci pour votre confiance
+            Merci pour votre confiance
           </p>
         </div>
       </div>
