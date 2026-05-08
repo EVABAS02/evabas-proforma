@@ -8,13 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 
 export default function Parametres() {
   const { user } = useAuth();
   const { data: profile } = useProfile();
   const qc = useQueryClient();
-  const [form, setForm] = useState({ company_name: '', company_address: '', company_city: '', phone_whatsapp: '', email: '' });
+  const [form, setForm] = useState({ company_name: '', company_address: '', company_city: '', phone_whatsapp: '', email: '', regime_fiscal: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export default function Parametres() {
         company_city: profile.company_city || '',
         phone_whatsapp: profile.phone_whatsapp || '',
         email: profile.email || '',
+        regime_fiscal: (profile as any).regime_fiscal || '',
       });
     }
   }, [profile]);
@@ -59,6 +61,14 @@ export default function Parametres() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>WhatsApp</Label><Input value={form.phone_whatsapp} onChange={e => setForm({ ...form, phone_whatsapp: e.target.value })} placeholder="+229 ..." /></div>
                 <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
+              </div>
+              <div className="pt-2">
+                <Label className="block mb-2">Régime fiscal de votre entreprise</Label>
+                <RadioGroup value={form.regime_fiscal} onValueChange={(v) => setForm({ ...form, regime_fiscal: v })} className="gap-2">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer"><RadioGroupItem value="tva" />Régime TVA (CA &gt; 50 millions FCFA)</label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer"><RadioGroupItem value="tps" />Régime TPS (CA &lt; 50 millions FCFA)</label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer"><RadioGroupItem value="inconnu" />Je ne sais pas encore</label>
+                </RadioGroup>
               </div>
               <Button type="submit" disabled={saving} className="w-full sm:w-auto bg-primary hover:bg-primary/90 h-11">
                 {saving ? 'Enregistrement...' : 'Enregistrer'}
