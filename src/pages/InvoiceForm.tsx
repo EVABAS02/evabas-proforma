@@ -269,29 +269,62 @@ export default function InvoiceForm() {
               <div className="flex flex-col md:flex-row justify-between gap-6 mt-6 pt-4 border-t">
                 <div>
                   <p className="text-[13px] uppercase tracking-wide text-[#6B7280] mb-3 font-semibold">Taxes applicables</p>
+                  {regime === 'tps' && (
+                    <div className="mb-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-[13px] text-blue-800">
+                      Régime TPS : TVA non applicable
+                    </div>
+                  )}
+                  {regime === 'inconnu' && (
+                    <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-[13px] text-amber-800">
+                      Consultez votre comptable pour les taxes applicables à votre entreprise.
+                    </div>
+                  )}
+                  <TooltipProvider delayDuration={150}>
                   <div className="flex flex-col gap-[10px]">
+                    {regime !== 'tps' && (
+                      <label className="flex items-center gap-2 text-[14px] text-[#374151] cursor-pointer">
+                        <Checkbox checked={applyTVA} onCheckedChange={(v) => setApplyTVA(!!v)} className="border-[#D1D5DB] data-[state=checked]:bg-[#6366F1] data-[state=checked]:border-[#6366F1] data-[state=checked]:text-white" />
+                        Appliquer TVA (18%)
+                        <Tooltip>
+                          <TooltipTrigger asChild><HelpCircle className="h-3.5 w-3.5 text-[#9CA3AF]" /></TooltipTrigger>
+                          <TooltipContent className="max-w-xs">Taxe sur la Valeur Ajoutée. Obligatoire si votre chiffre d'affaires dépasse 50 millions FCFA par an.</TooltipContent>
+                        </Tooltip>
+                      </label>
+                    )}
                     <label className="flex items-center gap-2 text-[14px] text-[#374151] cursor-pointer">
-                      <Checkbox checked={applyTVA} onCheckedChange={(v) => setApplyTVA(!!v)} className="border-[#D1D5DB] data-[state=checked]:bg-[#6366F1] data-[state=checked]:border-[#6366F1] data-[state=checked]:text-white" />
-                      Appliquer TVA (18%)
+                      <Checkbox checked={applyAIB} onCheckedChange={(v) => setApplyAIB(!!v)} className="border-[#D1D5DB] data-[state=checked]:bg-[#6366F1] data-[state=checked]:border-[#6366F1] data-[state=checked]:text-white" />
+                      Appliquer AIB
                     </label>
-                    <label className="flex items-center gap-2 text-[14px] text-[#374151] cursor-pointer">
-                      <Checkbox checked={applyMTCC} onCheckedChange={(v) => setApplyMTCC(!!v)} className="border-[#D1D5DB] data-[state=checked]:bg-[#6366F1] data-[state=checked]:border-[#6366F1] data-[state=checked]:text-white" />
-                      Appliquer MTCC (1%)
-                    </label>
-                    <label className="flex items-center gap-2 text-[14px] text-[#374151] cursor-pointer">
-                      <Checkbox checked={applyTCC} onCheckedChange={(v) => setApplyTCC(!!v)} className="border-[#D1D5DB] data-[state=checked]:bg-[#6366F1] data-[state=checked]:border-[#6366F1] data-[state=checked]:text-white" />
-                      Appliquer TCC (1%)
-                    </label>
+                    {applyAIB && (
+                      <RadioGroup value={String(aibRate)} onValueChange={(v) => setAibRate(v === '0.05' ? 0.05 : 0.01)} className="ml-6 mt-1 gap-2">
+                        <label className="flex items-center gap-2 text-[14px] text-[#374151] cursor-pointer">
+                          <RadioGroupItem value="0.01" id="aib-1" />
+                          Fournisseur immatriculé (1%)
+                          <Tooltip>
+                            <TooltipTrigger asChild><HelpCircle className="h-3.5 w-3.5 text-[#9CA3AF]" /></TooltipTrigger>
+                            <TooltipContent className="max-w-xs">Acompte sur Impôt assis sur le Bénéfice. Fournisseur enregistré avec IFU.</TooltipContent>
+                          </Tooltip>
+                        </label>
+                        <label className="flex items-center gap-2 text-[14px] text-[#374151] cursor-pointer">
+                          <RadioGroupItem value="0.05" id="aib-5" />
+                          Fournisseur non immatriculé (5%)
+                          <Tooltip>
+                            <TooltipTrigger asChild><HelpCircle className="h-3.5 w-3.5 text-[#9CA3AF]" /></TooltipTrigger>
+                            <TooltipContent className="max-w-xs">Fournisseur sans IFU, non immatriculé aux impôts du Bénin.</TooltipContent>
+                          </Tooltip>
+                        </label>
+                      </RadioGroup>
+                    )}
                   </div>
+                  </TooltipProvider>
                 </div>
                 <div className="min-w-[260px] space-y-1.5 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">Montant HT</span><span className="tabular-nums font-medium">{formatFCFA(totalHT)}</span></div>
                   {applyTVA && <div className="flex justify-between"><span className="text-muted-foreground">TVA (18%)</span><span className="tabular-nums">{formatFCFA(tva)}</span></div>}
-                  {applyMTCC && <div className="flex justify-between"><span className="text-muted-foreground">MTCC (1%)</span><span className="tabular-nums">{formatFCFA(mtcc)}</span></div>}
-                  {applyTCC && <div className="flex justify-between"><span className="text-muted-foreground">TCC (1%)</span><span className="tabular-nums">{formatFCFA(tcc)}</span></div>}
+                  {applyAIB && <div className="flex justify-between"><span className="text-muted-foreground">AIB ({aibRate === 0.05 ? '5' : '1'}%)</span><span className="tabular-nums">{formatFCFA(aib)}</span></div>}
                   <div className="flex justify-between pt-2 border-t mt-2">
                     <span className="font-display font-bold">Total TTC</span>
-                    <span className="font-display font-bold text-lg tabular-nums" style={{ color: '#6366F1' }}>{formatFCFA(totalTTC)}</span>
+                    <span className="font-display font-bold text-lg tabular-nums" style={{ color: '#000000', whiteSpace: 'nowrap' }}>{formatFCFA(totalTTC)}</span>
                   </div>
                 </div>
               </div>
