@@ -100,6 +100,8 @@ export type Database = {
       }
       invoices: {
         Row: {
+          aib_rate: number
+          apply_aib: boolean
           apply_mtcc: boolean
           apply_tcc: boolean
           apply_tva: boolean
@@ -113,6 +115,7 @@ export type Database = {
           date: string
           id: string
           invoice_number: string
+          montant_aib: number
           montant_ht: number
           montant_mtcc: number
           montant_tcc: number
@@ -124,6 +127,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          aib_rate?: number
+          apply_aib?: boolean
           apply_mtcc?: boolean
           apply_tcc?: boolean
           apply_tva?: boolean
@@ -137,6 +142,7 @@ export type Database = {
           date?: string
           id?: string
           invoice_number: string
+          montant_aib?: number
           montant_ht?: number
           montant_mtcc?: number
           montant_tcc?: number
@@ -148,6 +154,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          aib_rate?: number
+          apply_aib?: boolean
           apply_mtcc?: boolean
           apply_tcc?: boolean
           apply_tva?: boolean
@@ -161,6 +169,7 @@ export type Database = {
           date?: string
           id?: string
           invoice_number?: string
+          montant_aib?: number
           montant_ht?: number
           montant_mtcc?: number
           montant_tcc?: number
@@ -223,6 +232,7 @@ export type Database = {
           email: string | null
           id: string
           phone_whatsapp: string | null
+          regime_fiscal: string | null
           updated_at: string
         }
         Insert: {
@@ -233,6 +243,7 @@ export type Database = {
           email?: string | null
           id: string
           phone_whatsapp?: string | null
+          regime_fiscal?: string | null
           updated_at?: string
         }
         Update: {
@@ -243,6 +254,7 @@ export type Database = {
           email?: string | null
           id?: string
           phone_whatsapp?: string | null
+          regime_fiscal?: string | null
           updated_at?: string
         }
         Relationships: []

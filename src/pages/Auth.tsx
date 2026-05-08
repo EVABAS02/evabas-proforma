@@ -38,6 +38,9 @@ export default function Auth() {
         toast.success('Compte créé !');
         navigate('/dashboard');
       } else {
+        if (!email.trim() || !password.trim()) {
+          throw new Error('Veuillez remplir tous les champs');
+        }
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         navigate('/dashboard');
