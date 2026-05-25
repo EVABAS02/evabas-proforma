@@ -15,18 +15,18 @@ export default function Parametres() {
   const { user } = useAuth();
   const { data: profile } = useProfile();
   const qc = useQueryClient();
-  const [form, setForm] = useState({ company_name: '', company_address: '', company_city: '', phone_whatsapp: '', email: '', regime_fiscal: '' });
+  const [form, setForm] = useState({ company_name: '', address: '', phone: '', email: '', regime_fiscal: '', role: 'user' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (profile) {
       setForm({
         company_name: profile.company_name || '',
-        company_address: profile.company_address || '',
-        company_city: profile.company_city || '',
-        phone_whatsapp: profile.phone_whatsapp || '',
+        address: profile.address || '',
+        phone: profile.phone || '',
         email: profile.email || '',
-        regime_fiscal: (profile as any).regime_fiscal || '',
+        regime_fiscal: profile.regime_fiscal || '',
+        role: profile.role || 'user',
       });
     }
   }, [profile]);
@@ -55,11 +55,10 @@ export default function Parametres() {
             <form onSubmit={save} className="space-y-4">
               <div><Label>Nom de l'entreprise *</Label><Input value={form.company_name} onChange={e => setForm({ ...form, company_name: e.target.value })} required /></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><Label>Adresse</Label><Input value={form.company_address} onChange={e => setForm({ ...form, company_address: e.target.value })} /></div>
-                <div><Label>Ville</Label><Input value={form.company_city} onChange={e => setForm({ ...form, company_city: e.target.value })} /></div>
+                <div className="sm:col-span-2"><Label>Adresse</Label><Input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><Label>WhatsApp</Label><Input value={form.phone_whatsapp} onChange={e => setForm({ ...form, phone_whatsapp: e.target.value })} placeholder="+229 ..." /></div>
+                <div><Label>Telephone</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="+229 ..." /></div>
                 <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
               </div>
               <div className="pt-2">

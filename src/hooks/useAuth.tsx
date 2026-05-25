@@ -16,18 +16,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const ensureProfile = async (userId: string, email: string | undefined) => {
+    const ensureProfile = async (authUser: User) => {
       try {
         const { data: existing } = await supabase
           .from('profiles')
           .select('id')
-          .eq('id', userId)
+          .eq('id', authUser.id)
           .maybeSingle();
         if (!existing) {
           await supabase.from('profiles').insert({
-            id: userId,
-            company_name: 'Mon Entreprise',
-            email: email ?? null,
+            id: authUser.id,
+            company_name: authUser.user_metadata?.company_name ?? 'Mon Entreprise',
+            email: authUser.email ?? null,
+            phone: authUser.user_metadata?.phone ?? null,
+            role: 'user',
           });
         }
       } catch (err) {
@@ -40,12 +42,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       if (event === 'SIGNED_IN' && session?.user) {
         // Defer to avoid deadlock with Supabase auth callback
-        setTimeout(() => ensureProfile(session.user.id, session.user.email), 0);
+        setTimeout(() => ensureProfile(session.user), 0);
       }
     });
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
+      if (session?.user) {
+        ensureProfile(session.user);
+      }
     });
     return () => subscription.unsubscribe();
   }, []);

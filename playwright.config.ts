@@ -5,6 +5,8 @@ export default createLovableConfig({
   // Example:
   // timeout: 60000,
   // use: {
-  //   baseURL: 'http://localhost:3000',
+  use: {
+    baseURL: "http://localhost:5173",
+  },
   // },
 });

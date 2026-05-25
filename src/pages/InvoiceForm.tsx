@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import { useAuth } from '@/hooks/useAuth';
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +18,11 @@ import { toast } from 'sonner';
 import { formatFCFA } from '@/lib/format';
 import { useProfile } from '@/hooks/useProfile';
 
+type Client = Tables<'clients'>;
+type Product = Tables<'produits'>;
+type InvoiceStatus = 'brouillon' | 'envoyee' | 'payee';
 type Item = { id?: string; product_id: string | null; designation: string; quantity: number; unit_price: number; manual?: boolean };
+type RegimeFiscal = 'tva' | 'tps' | 'inconnu';
 
 const MANUAL = '__manual__';
 
@@ -30,14 +35,14 @@ export default function InvoiceForm() {
   const [clientId, setClientId] = useState<string>('');
   const [manualClientName, setManualClientName] = useState<string>('');
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
-  const [status, setStatus] = useState<'brouillon' | 'envoyee' | 'payee'>('brouillon');
+  const [status, setStatus] = useState<InvoiceStatus>('brouillon');
   const [items, setItems] = useState<Item[]>([{ product_id: null, designation: '', quantity: 1, unit_price: 0 }]);
   const [applyTVA, setApplyTVA] = useState(false);
   const [applyAIB, setApplyAIB] = useState(false);
   const [aibRate, setAibRate] = useState<0.01 | 0.05>(0.01);
   const [loading, setLoading] = useState(false);
   const { data: profile } = useProfile();
-  const regime = (profile as any)?.regime_fiscal as 'tva' | 'tps' | 'inconnu' | undefined;
+  const regime = profile?.regime_fiscal as RegimeFiscal | undefined;
 
   // Apply smart defaults from regime when creating a new invoice
   useEffect(() => {
@@ -50,14 +55,14 @@ export default function InvoiceForm() {
     queryKey: ['clients'],
     queryFn: async () => {
       const { data } = await supabase.from('clients').select('*').order('name');
-      return data || [];
+      return (data || []) as Client[];
     },
   });
   const { data: products = [] } = useQuery({
-    queryKey: ['products'],
+    queryKey: ['produits'],
     queryFn: async () => {
-      const { data } = await supabase.from('products').select('*').order('name');
-      return data || [];
+      const { data } = await supabase.from('produits').select('*').order('name');
+      return (data || []) as Product[];
     },
   });
 
@@ -68,17 +73,10 @@ export default function InvoiceForm() {
       if (!inv) return;
       if (inv.client_id) {
         setClientId(inv.client_id);
-      } else if (inv.client_name) {
-        setClientId(MANUAL);
-        setManualClientName(inv.client_name);
       }
       setDate(inv.date);
-      setStatus(inv.status);
-      setApplyTVA(!!(inv as any).apply_tva);
-      setApplyAIB(!!(inv as any).apply_aib);
-      const r = Number((inv as any).aib_rate);
-      setAibRate(r === 0.05 ? 0.05 : 0.01);
-      const { data: its } = await supabase.from('invoice_items').select('*').eq('invoice_id', id!).order('position');
+      setStatus(inv.status as InvoiceStatus);
+      const { data: its } = await supabase.from('invoice_items').select('*').eq('invoice_id', id!);
       setItems((its || []).map(it => ({ id: it.id, product_id: it.product_id, designation: it.designation, quantity: it.quantity, unit_price: it.unit_price, manual: !it.product_id })));
     })();
   }, [id, editing]);
@@ -96,7 +94,7 @@ export default function InvoiceForm() {
   const pickProduct = (i: number, productId: string) => {
     const p = products.find(pp => pp.id === productId);
     if (!p) return;
-    updateItem(i, { product_id: p.id, designation: p.name, unit_price: p.unit_price });
+    updateItem(i, { product_id: p.id, designation: p.name, unit_price: p.price });
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -108,36 +106,36 @@ export default function InvoiceForm() {
     setLoading(true);
     try {
       const isManualClient = clientId === MANUAL;
-      const client = isManualClient ? null : clients.find(c => c.id === clientId);
+      let resolvedClientId = isManualClient || !clientId ? null : clientId;
+      if (isManualClient && manualClientName.trim()) {
+        const { data: createdClient, error: clientError } = await supabase
+          .from('clients')
+          .insert({ company_id: user.id, name: manualClientName.trim() })
+          .select('id')
+          .single();
+        if (clientError) throw clientError;
+        resolvedClientId = createdClient.id;
+      }
       const payload = {
-        user_id: user.id,
-        client_id: isManualClient || !clientId ? null : clientId,
-        date, status, notes: '',
+        company_id: user.id,
+        client_id: resolvedClientId,
+        date,
+        status,
+        total_ht: Math.round(totalHT),
         total_ttc: Math.round(totalTTC),
-        invoice_number: '',
-        client_name: isManualClient ? (manualClientName.trim() || null) : (client?.name || null),
-        client_address: client?.address || null,
-        client_phone: client?.phone || null,
-        client_email: client?.email || null,
-        client_ifu: client?.ifu || null,
-        apply_tva: applyTVA,
-        apply_mtcc: false,
-        apply_tcc: false,
-        apply_aib: applyAIB,
-        aib_rate: aibRate,
-        montant_ht: Math.round(totalHT),
-        montant_tva: Math.round(tva),
-        montant_mtcc: 0,
-        montant_tcc: 0,
-        montant_aib: Math.round(aib),
-      } as any;
+        created_by: user.id,
+      };
       let invoiceId = id!;
       if (editing) {
         const { error } = await supabase.from('invoices').update(payload).eq('id', id!);
         if (error) throw error;
         await supabase.from('invoice_items').delete().eq('invoice_id', id!);
       } else {
-        const { data, error } = await supabase.from('invoices').insert(payload).select('id').single();
+        const { data, error } = await supabase
+          .from('invoices')
+          .insert({ ...payload, number: `FP-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}` })
+          .select('id')
+          .single();
         if (error) throw error;
         invoiceId = data.id;
       }
@@ -150,14 +148,13 @@ export default function InvoiceForm() {
           quantity: Math.max(1, Math.round(it.quantity)),
           unit_price: Math.round(it.unit_price),
           total: Math.round(it.quantity * it.unit_price),
-          position: idx,
         }));
       const { error: itErr } = await supabase.from('invoice_items').insert(itemsPayload);
       if (itErr) throw itErr;
       toast.success(editing ? 'Facture mise à jour' : 'Facture créée');
       nav(`/factures/${invoiceId}`);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Une erreur est survenue');
     } finally { setLoading(false); }
   };
 
@@ -196,7 +193,7 @@ export default function InvoiceForm() {
               <div><Label>Date</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
               <div>
                 <Label>Statut</Label>
-                <Select value={status} onValueChange={(v: any) => setStatus(v)}>
+                <Select value={status} onValueChange={(v) => setStatus(v as InvoiceStatus)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="brouillon">Brouillon</SelectItem>

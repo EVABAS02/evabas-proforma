@@ -41,10 +41,7 @@ export default function Landing() {
             <a href="#avantages" className="text-[13px] font-medium text-[#374151] hover:text-[#6366F1] transition-colors px-4 py-1.5">Avantages</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Link to="/auth"
-              className="inline-flex items-center justify-center bg-[#6366F1] hover:bg-[#4F46E5] text-white text-sm font-semibold rounded-[10px] px-5 py-2.5 transition-all hover:scale-[1.02]">
-              Se connecter
-            </Link>
+          
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-md hover:bg-muted"
@@ -120,9 +117,9 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((f, i) => (
               <motion.div key={f.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}>
-                <div className="group bg-white border border-[#E5E7EB] rounded-2xl p-6 h-full transition-all duration-[250ms] ease-out hover:border-[#C7D2FE] hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)]">
+                <div className="group bg-white border border-[#E5E7EB] rounded-2xl p-6 h-full transition-all duration-300 ease-out hover:border-[#C7D2FE] hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)]">
                   <div
-                    className="mb-5 flex items-center justify-center transition-colors duration-[250ms] ease-out group-hover:bg-[#E0E7FF]"
+                    className="mb-5 flex items-center justify-center transition-colors duration-300 ease-out group-hover:bg-[#E0E7FF]"
                     style={{ width: 48, height: 48, borderRadius: 12, padding: 12, background: '#EEF2FF' }}
                   >
                     <f.Icon size={24} color="#6366F1" />

@@ -7,79 +7,160 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
-      clients: {
+      profiles: {
         Row: {
-          address: string | null
-          created_at: string
-          email: string | null
           id: string
-          ifu: string | null
-          name: string
+          company_name: string | null
+          email: string | null
           phone: string | null
-          updated_at: string
-          user_id: string
+          address: string | null
+          regime_fiscal: string | null
+          role: string | null
         }
         Insert: {
-          address?: string | null
-          created_at?: string
+          id: string
+          company_name?: string | null
           email?: string | null
-          id?: string
-          ifu?: string | null
-          name: string
           phone?: string | null
-          updated_at?: string
-          user_id: string
+          address?: string | null
+          regime_fiscal?: string | null
+          role?: string | null
         }
         Update: {
-          address?: string | null
-          created_at?: string
-          email?: string | null
           id?: string
-          ifu?: string | null
-          name?: string
+          company_name?: string | null
+          email?: string | null
           phone?: string | null
-          updated_at?: string
-          user_id?: string
+          address?: string | null
+          regime_fiscal?: string | null
+          role?: string | null
         }
         Relationships: []
       }
-      invoice_items: {
+      clients: {
         Row: {
-          designation: string
           id: string
-          invoice_id: string
-          position: number
-          product_id: string | null
-          quantity: number
-          total: number
-          unit_price: number
+          company_id: string
+          name: string
+          address: string | null
+          phone: string | null
+          ifu: string | null
         }
         Insert: {
-          designation: string
           id?: string
-          invoice_id: string
-          position?: number
-          product_id?: string | null
-          quantity?: number
-          total?: number
-          unit_price?: number
+          company_id: string
+          name: string
+          address?: string | null
+          phone?: string | null
+          ifu?: string | null
         }
         Update: {
-          designation?: string
+          id?: string
+          company_id?: string
+          name?: string
+          address?: string | null
+          phone?: string | null
+          ifu?: string | null
+        }
+        Relationships: []
+      }
+      produits: {
+        Row: {
+          id: string
+          company_id: string
+          name: string
+          price: number
+          unit: string | null
+        }
+        Insert: {
+          id?: string
+          company_id: string
+          name: string
+          price?: number
+          unit?: string | null
+        }
+        Update: {
+          id?: string
+          company_id?: string
+          name?: string
+          price?: number
+          unit?: string | null
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          id: string
+          company_id: string
+          client_id: string | null
+          number: string
+          date: string
+          status: string
+          total_ht: number
+          total_ttc: number
+          created_by: string | null
+        }
+        Insert: {
+          id?: string
+          company_id: string
+          client_id?: string | null
+          number: string
+          date: string
+          status?: string
+          total_ht?: number
+          total_ttc?: number
+          created_by?: string | null
+        }
+        Update: {
+          id?: string
+          company_id?: string
+          client_id?: string | null
+          number?: string
+          date?: string
+          status?: string
+          total_ht?: number
+          total_ttc?: number
+          created_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_items: {
+        Row: {
+          id: string
+          invoice_id: string
+          product_id: string | null
+          designation: string
+          quantity: number
+          unit_price: number
+          total: number
+        }
+        Insert: {
+          id?: string
+          invoice_id: string
+          product_id?: string | null
+          designation: string
+          quantity?: number
+          unit_price?: number
+          total?: number
+        }
+        Update: {
           id?: string
           invoice_id?: string
-          position?: number
           product_id?: string | null
+          designation?: string
           quantity?: number
-          total?: number
           unit_price?: number
+          total?: number
         }
         Relationships: [
           {
@@ -93,171 +174,10 @@ export type Database = {
             foreignKeyName: "invoice_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: "products"
+            referencedRelation: "produits"
             referencedColumns: ["id"]
           },
         ]
-      }
-      invoices: {
-        Row: {
-          aib_rate: number
-          apply_aib: boolean
-          apply_mtcc: boolean
-          apply_tcc: boolean
-          apply_tva: boolean
-          client_address: string | null
-          client_email: string | null
-          client_id: string | null
-          client_ifu: string | null
-          client_name: string | null
-          client_phone: string | null
-          created_at: string
-          date: string
-          id: string
-          invoice_number: string
-          montant_aib: number
-          montant_ht: number
-          montant_mtcc: number
-          montant_tcc: number
-          montant_tva: number
-          notes: string | null
-          status: Database["public"]["Enums"]["invoice_status"]
-          total_ttc: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          aib_rate?: number
-          apply_aib?: boolean
-          apply_mtcc?: boolean
-          apply_tcc?: boolean
-          apply_tva?: boolean
-          client_address?: string | null
-          client_email?: string | null
-          client_id?: string | null
-          client_ifu?: string | null
-          client_name?: string | null
-          client_phone?: string | null
-          created_at?: string
-          date?: string
-          id?: string
-          invoice_number: string
-          montant_aib?: number
-          montant_ht?: number
-          montant_mtcc?: number
-          montant_tcc?: number
-          montant_tva?: number
-          notes?: string | null
-          status?: Database["public"]["Enums"]["invoice_status"]
-          total_ttc?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          aib_rate?: number
-          apply_aib?: boolean
-          apply_mtcc?: boolean
-          apply_tcc?: boolean
-          apply_tva?: boolean
-          client_address?: string | null
-          client_email?: string | null
-          client_id?: string | null
-          client_ifu?: string | null
-          client_name?: string | null
-          client_phone?: string | null
-          created_at?: string
-          date?: string
-          id?: string
-          invoice_number?: string
-          montant_aib?: number
-          montant_ht?: number
-          montant_mtcc?: number
-          montant_tcc?: number
-          montant_tva?: number
-          notes?: string | null
-          status?: Database["public"]["Enums"]["invoice_status"]
-          total_ttc?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoices_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      products: {
-        Row: {
-          category: string | null
-          created_at: string
-          description: string | null
-          id: string
-          name: string
-          unit_price: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          category?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          name: string
-          unit_price?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          category?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          unit_price?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          company_address: string | null
-          company_city: string | null
-          company_name: string
-          created_at: string
-          email: string | null
-          id: string
-          phone_whatsapp: string | null
-          regime_fiscal: string | null
-          updated_at: string
-        }
-        Insert: {
-          company_address?: string | null
-          company_city?: string | null
-          company_name?: string
-          created_at?: string
-          email?: string | null
-          id: string
-          phone_whatsapp?: string | null
-          regime_fiscal?: string | null
-          updated_at?: string
-        }
-        Update: {
-          company_address?: string | null
-          company_city?: string | null
-          company_name?: string
-          created_at?: string
-          email?: string | null
-          id?: string
-          phone_whatsapp?: string | null
-          regime_fiscal?: string | null
-          updated_at?: string
-        }
-        Relationships: []
       }
     }
     Views: {
@@ -267,7 +187,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      invoice_status: "brouillon" | "envoyee" | "payee"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -275,127 +195,29 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = Database["public"]
 
 export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  TableName extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"]),
+> = (DefaultSchema["Tables"] & DefaultSchema["Views"])[TableName] extends {
+  Row: infer R
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
-    }
-    ? R
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
+  ? R
+  : never
 
-export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+export type TablesInsert<TableName extends keyof DefaultSchema["Tables"]> =
+  DefaultSchema["Tables"][TableName] extends {
+    Insert: infer I
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
 
-export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+export type TablesUpdate<TableName extends keyof DefaultSchema["Tables"]> =
+  DefaultSchema["Tables"][TableName] extends {
+    Update: infer U
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
 
-export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
-
-export const Constants = {
-  public: {
-    Enums: {
-      invoice_status: ["brouillon", "envoyee", "payee"],
-    },
-  },
-} as const
+export type Enums<EnumName extends keyof DefaultSchema["Enums"]> =
+  DefaultSchema["Enums"][EnumName]

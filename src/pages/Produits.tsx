@@ -12,7 +12,7 @@ import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatFCFA } from '@/lib/format';
 
-type Product = { id: string; name: string; description: string | null; unit_price: number; category: string | null };
+type Product = { id: string; name: string; price: number; unit: string | null };
 
 export default function Produits() {
   const { user } = useAuth();
@@ -20,23 +20,24 @@ export default function Produits() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [search, setSearch] = useState('');
-  const [form, setForm] = useState({ name: '', unit_price: 0, category: '' });
+  const [form, setForm] = useState({ name: '', price: 0, unit: '' });
 
   const { data: products = [] } = useQuery({
-    queryKey: ['products'],
+    queryKey: ['produits'],
     queryFn: async () => {
-      const { data } = await supabase.from('products').select('*').order('name');
+      const { data, error } = await supabase.from('produits').select('*').order('name');
+      if (error) throw error;
       return (data as Product[]) || [];
     },
   });
 
   const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
-  const reset = () => { setForm({ name: '', unit_price: 0, category: '' }); setEditing(null); };
+  const reset = () => { setForm({ name: '', price: 0, unit: '' }); setEditing(null); };
   const openNew = () => { reset(); setOpen(true); };
   const openEdit = (p: Product) => {
     setEditing(p);
-    setForm({ name: p.name, unit_price: p.unit_price, category: p.category || '' });
+    setForm({ name: p.name, price: p.price, unit: p.unit || '' });
     setOpen(true);
   };
 
@@ -44,27 +45,27 @@ export default function Produits() {
     e.preventDefault();
     if (!user) return;
     try {
-      const payload = { ...form, unit_price: Math.round(Number(form.unit_price)) };
+      const payload = { ...form, price: Math.round(Number(form.price)) };
       if (editing) {
-        const { error } = await supabase.from('products').update(payload).eq('id', editing.id);
+        const { error } = await supabase.from('produits').update(payload).eq('id', editing.id);
         if (error) throw error;
-        toast.success('Produit mis à jour');
+        toast.success('Produit mis a jour');
       } else {
-        const { error } = await supabase.from('products').insert({ ...payload, user_id: user.id });
+        const { error } = await supabase.from('produits').insert({ ...payload, company_id: user.id });
         if (error) throw error;
-        toast.success('Produit créé');
+        toast.success('Produit cree');
       }
       setOpen(false); reset();
-      qc.invalidateQueries({ queryKey: ['products'] });
-    } catch (err: any) { toast.error(err.message); }
+      qc.invalidateQueries({ queryKey: ['produits'] });
+    } catch (err) { toast.error(err instanceof Error ? err.message : 'Une erreur est survenue'); }
   };
 
   const remove = async (id: string) => {
     if (!confirm('Supprimer ce produit ?')) return;
-    const { error } = await supabase.from('products').delete().eq('id', id);
+    const { error } = await supabase.from('produits').delete().eq('id', id);
     if (error) return toast.error(error.message);
-    toast.success('Produit supprimé');
-    qc.invalidateQueries({ queryKey: ['products'] });
+    toast.success('Produit supprime');
+    qc.invalidateQueries({ queryKey: ['produits'] });
   };
 
   return (
@@ -90,14 +91,13 @@ export default function Produits() {
               <p className="text-center text-muted-foreground py-8">Aucun produit</p>
             ) : (
               <>
-              {/* Mobile cards */}
               <div className="md:hidden space-y-3">
                 {filtered.map(p => (
                   <div key={p.id} className="border border-border rounded-lg p-4 flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium truncate">{p.name}</p>
-                      {p.category && <p className="text-xs text-muted-foreground mt-0.5">{p.category}</p>}
-                      <p className="text-sm font-semibold mt-1 tabular-nums">{formatFCFA(p.unit_price)}</p>
+                      {p.unit && <p className="text-xs text-muted-foreground mt-0.5">{p.unit}</p>}
+                      <p className="text-sm font-semibold mt-1 tabular-nums">{formatFCFA(p.price)}</p>
                     </div>
                     <div className="flex gap-1 shrink-0">
                       <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
@@ -106,13 +106,12 @@ export default function Produits() {
                   </div>
                 ))}
               </div>
-              {/* Desktop table */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs text-muted-foreground border-b">
-                      <th className="py-3 pr-4">Désignation</th>
-                      <th className="py-3 pr-4">Catégorie</th>
+                      <th className="py-3 pr-4">Designation</th>
+                      <th className="py-3 pr-4">Unite</th>
                       <th className="py-3 pr-4 text-right">Prix unitaire</th>
                       <th className="py-3 text-right">Actions</th>
                     </tr>
@@ -121,8 +120,8 @@ export default function Produits() {
                     {filtered.map(p => (
                       <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
                         <td className="py-3 pr-4 font-medium">{p.name}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">{p.category || '—'}</td>
-                        <td className="py-3 pr-4 text-right tabular-nums">{formatFCFA(p.unit_price)}</td>
+                        <td className="py-3 pr-4 text-muted-foreground">{p.unit || '-'}</td>
+                        <td className="py-3 pr-4 text-right tabular-nums">{formatFCFA(p.price)}</td>
                         <td className="py-3 text-right">
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => remove(p.id)}><Trash2 className="h-4 w-4" /></Button>
@@ -141,14 +140,14 @@ export default function Produits() {
           <DialogContent>
             <DialogHeader><DialogTitle>{editing ? 'Modifier le produit' : 'Nouveau produit'}</DialogTitle></DialogHeader>
             <form onSubmit={submit} className="space-y-4">
-              <div><Label>Désignation *</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></div>
+              <div><Label>Designation *</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><Label>Catégorie</Label><Input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} /></div>
-                <div><Label>Prix unitaire (FCFA) *</Label><Input type="number" min="0" value={form.unit_price} onChange={e => setForm({ ...form, unit_price: Number(e.target.value) })} required /></div>
+                <div><Label>Unite</Label><Input value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} placeholder="piece, m2, kg..." /></div>
+                <div><Label>Prix unitaire (FCFA) *</Label><Input type="number" min="0" value={form.price} onChange={e => setForm({ ...form, price: Number(e.target.value) })} required /></div>
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
-                <Button type="submit" className="bg-primary hover:bg-primary/90">{editing ? 'Mettre à jour' : 'Créer'}</Button>
+                <Button type="submit" className="bg-primary hover:bg-primary/90">{editing ? 'Mettre a jour' : 'Creer'}</Button>
               </DialogFooter>
             </form>
           </DialogContent>

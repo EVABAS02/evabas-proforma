@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +19,13 @@ export default function Auth() {
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { session, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && session) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [authLoading, session, navigate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,22 +39,22 @@ export default function Auth() {
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/dashboard`,
-            data: { company_name: companyName, phone_whatsapp: phone },
+            data: { company_name: companyName, phone },
           },
         });
         if (error) throw error;
         toast.success('Compte créé !');
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       } else {
         if (!email.trim() || !password.trim()) {
           throw new Error('Veuillez remplir tous les champs');
         }
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       }
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Une erreur est survenue');
     } finally {
       setLoading(false);
     }
