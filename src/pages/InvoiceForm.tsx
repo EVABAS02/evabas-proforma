@@ -14,7 +14,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, Trash2, ArrowLeft, PenLine, HelpCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast as sonnerToast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 import { formatFCFA } from '@/lib/format';
 import { useProfile } from '@/hooks/useProfile';
 
@@ -41,8 +42,17 @@ export default function InvoiceForm() {
   const [applyAIB, setApplyAIB] = useState(false);
   const [aibRate, setAibRate] = useState<0.01 | 0.05>(0.01);
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const { data: profile } = useProfile();
   const regime = profile?.regime_fiscal as RegimeFiscal | undefined;
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    getUser();
+  }, []);
 
   // Apply smart defaults from regime when creating a new invoice
   useEffect(() => {
@@ -52,16 +62,18 @@ export default function InvoiceForm() {
   }, [regime, editing]);
 
   const { data: clients = [] } = useQuery({
-    queryKey: ['clients'],
+    queryKey: ['clients', userId],
+    enabled: !!userId,
     queryFn: async () => {
-      const { data } = await supabase.from('clients').select('*').order('nom');
+      const { data } = await supabase.from('clients').select('*').eq('user_id', userId).order('nom');
       return (data || []) as Client[];
     },
   });
   const { data: products = [] } = useQuery({
-    queryKey: ['produits'],
+    queryKey: ['produits', userId],
+    enabled: !!userId,
     queryFn: async () => {
-      const { data } = await supabase.from('produits').select('*').order('designation');
+      const { data } = await supabase.from('produits').select('*').eq('user_id', userId).order('designation');
       return (data || []) as Product[];
     },
   });
@@ -69,15 +81,22 @@ export default function InvoiceForm() {
   useEffect(() => {
     if (!editing) return;
     (async () => {
-      const { data: inv } = await supabase.from('invoices').select('*').eq('id', id!).maybeSingle();
+      const { data: inv } = await supabase.from('factures').select('*').eq('id', id!).maybeSingle();
       if (!inv) return;
       if (inv.client_id) {
         setClientId(inv.client_id);
       }
-      setDate(inv.date);
-      setStatus(inv.status as InvoiceStatus);
-      const { data: its } = await supabase.from('invoice_items').select('*').eq('invoice_id', id!);
-      setItems((its || []).map(it => ({ id: it.id, product_id: it.product_id, designation: it.designation, quantity: it.quantity, unit_price: it.unit_price, manual: !it.product_id })));
+      setDate(inv.date_facture);
+      setStatus(inv.statut as InvoiceStatus);
+      const { data: its } = await supabase.from('facture_articles').select('*').eq('facture_id', id!);
+      setItems((its || []).map(it => ({
+        id: it.id,
+        product_id: it.produit_id,
+        designation: it.designation,
+        quantity: it.quantite,
+        unit_price: it.prix_unitaire,
+        manual: !it.produit_id,
+      })));
     })();
   }, [id, editing]);
 
@@ -101,14 +120,14 @@ export default function InvoiceForm() {
     e.preventDefault();
     if (!user) return;
     if (items.length === 0 || !items.some(it => it.designation.trim())) {
-      return toast.error('Ajoutez au moins une ligne');
+      return sonnerToast.error('Ajoutez au moins une ligne');
     }
     setLoading(true);
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      const userId = authUser?.id;
+      if (!userId) throw new Error('Utilisateur non authentifie');
       const isManualClient = clientId === MANUAL;
       let resolvedClientId = isManualClient || !clientId ? null : clientId;
+      let selectedClientName: string | null = null;
       if (isManualClient && manualClientName.trim()) {
         const { data: createdClient, error: clientError } = await supabase
           .from('clients')
@@ -123,26 +142,34 @@ export default function InvoiceForm() {
           .single();
         if (clientError) throw clientError;
         resolvedClientId = createdClient.id;
+        selectedClientName = manualClientName.trim();
+      } else if (resolvedClientId) {
+        const selectedClient = clients.find(client => client.id === resolvedClientId);
+        selectedClientName = selectedClient?.nom || null;
       }
-      const payload = {
-        company_id: user.id,
-        client_id: resolvedClientId,
-        date,
-        status,
-        total_ht: Math.round(totalHT),
-        total_ttc: Math.round(totalTTC),
-        created_by: user.id,
+      const generatedNumber = `FP-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+      const invoicePayload = {
         user_id: userId,
+        numero: editing ? undefined : generatedNumber,
+        date_facture: date,
+        statut: status,
+        client_id: resolvedClientId,
+        client_nom: selectedClientName,
+        montant_ht: Math.round(totalHT),
+        montant_tva: Math.round(tva),
+        montant_ttc: Math.round(totalTTC),
+        apply_tva: applyTVA,
       };
       let invoiceId = id!;
       if (editing) {
-        const { error } = await supabase.from('invoices').update(payload).eq('id', id!);
+        const { numero, ...updatePayload } = invoicePayload;
+        const { error } = await supabase.from('factures').update(updatePayload).eq('id', id!);
         if (error) throw error;
-        await supabase.from('invoice_items').delete().eq('invoice_id', id!);
+        await supabase.from('facture_articles').delete().eq('facture_id', id!);
       } else {
         const { data, error } = await supabase
-          .from('invoices')
-          .insert({ ...payload, number: `FP-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}` })
+          .from('factures')
+          .insert(invoicePayload)
           .select('id')
           .single();
         if (error) throw error;
@@ -150,20 +177,24 @@ export default function InvoiceForm() {
       }
       const itemsPayload = items
         .filter(it => it.designation.trim())
-        .map((it, idx) => ({
-          invoice_id: invoiceId,
-          product_id: it.product_id,
+        .map(it => ({
+          facture_id: invoiceId,
+          produit_id: it.product_id || null,
           designation: it.designation,
-          quantity: Math.max(1, Math.round(it.quantity)),
-          unit_price: Math.round(it.unit_price),
-          total: Math.round(it.quantity * it.unit_price),
+          quantite: Math.max(1, Math.round(it.quantity)),
+          prix_unitaire: Math.round(it.unit_price),
         }));
-      const { error: itErr } = await supabase.from('invoice_items').insert(itemsPayload);
+      const { error: itErr } = await supabase.from('facture_articles').insert(itemsPayload);
       if (itErr) throw itErr;
-      toast.success(editing ? 'Facture mise à jour' : 'Facture créée');
+      sonnerToast.success(editing ? 'Facture mise à jour' : 'Facture créée');
       nav(`/factures/${invoiceId}`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Une erreur est survenue');
+    } catch (error) {
+      console.error('Invoice error full:', JSON.stringify(error, null, 2));
+      toast({
+        title: "Erreur détaillée",
+        description: JSON.stringify(error),
+        variant: "destructive"
+      });
     } finally { setLoading(false); }
   };
 

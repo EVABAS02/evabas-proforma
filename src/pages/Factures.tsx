@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,34 +17,48 @@ const statuses = ['brouillon', 'envoyee', 'payee'] as const;
 export default function Factures() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    getUser();
+  }, []);
 
   const { data: invoices = [] } = useQuery({
-    queryKey: ['invoices'],
+    queryKey: ['invoices', userId],
+    enabled: !!userId,
     queryFn: async () => {
-      const { data } = await supabase.from('invoices').select('*, clients(nom)').order('date', { ascending: false });
+      const { data } = await supabase
+        .from('factures')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
       return data || [];
     },
   });
 
   const filtered = invoices.filter(i =>
-    i.number.toLowerCase().includes(search.toLowerCase()) ||
-    (i.clients?.nom || '').toLowerCase().includes(search.toLowerCase())
+    i.numero.toLowerCase().includes(search.toLowerCase()) ||
+    (i.client_nom || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const updateStatus = async (id: string, status: typeof statuses[number]) => {
-    const { error } = await supabase.from('invoices').update({ status }).eq('id', id);
+    const { error } = await supabase.from('factures').update({ statut: status }).eq('id', id);
     if (error) return toast.error(error.message);
-    toast.success('Statut mis à jour');
-    qc.invalidateQueries({ queryKey: ['invoices'] });
-    qc.invalidateQueries({ queryKey: ['recent-invoices'] });
+    toast.success('Statut mis a jour');
+    qc.invalidateQueries({ queryKey: ['invoices', userId] });
+    qc.invalidateQueries({ queryKey: ['recent-invoices', userId] });
   };
 
   const remove = async (id: string) => {
     if (!confirm('Supprimer cette facture ?')) return;
-    const { error } = await supabase.from('invoices').delete().eq('id', id);
+    const { error } = await supabase.from('factures').delete().eq('id', id);
     if (error) return toast.error(error.message);
-    toast.success('Facture supprimée');
-    qc.invalidateQueries({ queryKey: ['invoices'] });
+    toast.success('Facture supprimee');
+    qc.invalidateQueries({ queryKey: ['invoices', userId] });
   };
 
   return (
@@ -64,7 +78,7 @@ export default function Factures() {
           <CardHeader>
             <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="N° ou client..." className="pl-9" />
+              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="N ou client..." className="pl-9" />
             </div>
           </CardHeader>
           <CardContent>
@@ -75,7 +89,7 @@ export default function Factures() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs text-muted-foreground border-b">
-                      <th className="py-3 pr-4">N°</th>
+                      <th className="py-3 pr-4">N</th>
                       <th className="py-3 pr-4">Client</th>
                       <th className="py-3 pr-4">Date</th>
                       <th className="py-3 pr-4 text-right">Montant TTC</th>
@@ -86,14 +100,14 @@ export default function Factures() {
                   <tbody>
                     {filtered.map((f) => (
                       <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30">
-                        <td className="py-3 pr-4 font-mono font-medium">{f.number}</td>
-                        <td className="py-3 pr-4">{f.clients?.nom || '-'}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">{formatDateShort(f.date)}</td>
-                        <td className="py-3 pr-4 text-right tabular-nums">{formatFCFA(Number(f.total_ttc))}</td>
+                        <td className="py-3 pr-4 font-mono font-medium">{f.numero}</td>
+                        <td className="py-3 pr-4">{f.client_nom || '-'}</td>
+                        <td className="py-3 pr-4 text-muted-foreground">{formatDateShort(f.date_facture)}</td>
+                        <td className="py-3 pr-4 text-right tabular-nums">{formatFCFA(Number(f.montant_ttc))}</td>
                         <td className="py-3 pr-4">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button><StatusBadge status={f.status} /></button>
+                              <button><StatusBadge status={f.statut} /></button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
                               {statuses.map(s => (

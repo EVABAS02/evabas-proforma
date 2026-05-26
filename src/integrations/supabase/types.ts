@@ -99,6 +99,87 @@ export type Database = {
         }
         Relationships: []
       }
+      factures: {
+        Row: {
+          id: string
+          user_id: string | null
+          numero: string
+          date_facture: string
+          statut: string
+          client_id: string | null
+          client_nom: string | null
+          client_telephone: string | null
+          client_adresse: string | null
+          client_ifu: string | null
+          montant_ht: number
+          montant_tva: number
+          montant_ttc: number
+          apply_tva: boolean | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          numero: string
+          date_facture: string
+          statut?: string
+          client_id?: string | null
+          client_nom?: string | null
+          client_telephone?: string | null
+          client_adresse?: string | null
+          client_ifu?: string | null
+          montant_ht?: number
+          montant_tva?: number
+          montant_ttc?: number
+          apply_tva?: boolean | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          numero?: string
+          date_facture?: string
+          statut?: string
+          client_id?: string | null
+          client_nom?: string | null
+          client_telephone?: string | null
+          client_adresse?: string | null
+          client_ifu?: string | null
+          montant_ht?: number
+          montant_tva?: number
+          montant_ttc?: number
+          apply_tva?: boolean | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      facture_articles: {
+        Row: {
+          id: string
+          facture_id: string
+          produit_id: string | null
+          designation: string
+          quantite: number
+          prix_unitaire: number
+        }
+        Insert: {
+          id?: string
+          facture_id: string
+          produit_id?: string | null
+          designation: string
+          quantite?: number
+          prix_unitaire?: number
+        }
+        Update: {
+          id?: string
+          facture_id?: string
+          produit_id?: string | null
+          designation?: string
+          quantite?: number
+          prix_unitaire?: number
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           id: string

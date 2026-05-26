@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,25 +13,41 @@ import AppLayout from '@/components/AppLayout';
 export default function Dashboard() {
   const { data: profile } = useProfile();
   const company = profile?.company_name || 'Mon Entreprise';
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    getUser();
+  }, []);
 
   const { data: stats } = useQuery({
-    queryKey: ['dashboard-stats'],
+    queryKey: ['dashboard-stats', userId],
+    enabled: !!userId,
     queryFn: async () => {
       const [{ count: invoiceCount }, { count: clientCount }, { count: productCount }, { data: invoices }] = await Promise.all([
-        supabase.from('invoices').select('*', { count: 'exact', head: true }),
-        supabase.from('clients').select('*', { count: 'exact', head: true }),
-        supabase.from('produits').select('*', { count: 'exact', head: true }),
-        supabase.from('invoices').select('total_ttc'),
+        supabase.from('factures').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+        supabase.from('clients').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+        supabase.from('produits').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+        supabase.from('factures').select('montant_ttc').eq('user_id', userId),
       ]);
-      const total = invoices?.reduce((s, i) => s + Number(i.total_ttc), 0) || 0;
+      const total = invoices?.reduce((s, i) => s + Number(i.montant_ttc), 0) || 0;
       return { invoiceCount: invoiceCount || 0, clientCount: clientCount || 0, productCount: productCount || 0, total };
     },
   });
 
   const { data: recent = [] } = useQuery({
-    queryKey: ['recent-invoices'],
+    queryKey: ['recent-invoices', userId],
+    enabled: !!userId,
     queryFn: async () => {
-      const { data } = await supabase.from('invoices').select('*, clients(nom)').order('date', { ascending: false }).limit(8);
+      const { data } = await supabase
+        .from('factures')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(8);
       return data || [];
     },
   });
@@ -68,8 +85,8 @@ export default function Dashboard() {
 
         <Card className="shadow-card border-border/60">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="font-display">Factures récentes</CardTitle>
-            <Link to="/factures" className="text-sm text-primary hover:underline font-medium">Voir tout →</Link>
+            <CardTitle className="font-display">Factures recentes</CardTitle>
+            <Link to="/factures" className="text-sm text-primary hover:underline font-medium">Voir tout</Link>
           </CardHeader>
           <CardContent>
             {recent.length === 0 ? (
@@ -79,7 +96,7 @@ export default function Dashboard() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs text-muted-foreground border-b">
-                      <th className="py-3 pr-4">N°</th>
+                      <th className="py-3 pr-4">N</th>
                       <th className="py-3 pr-4">Client</th>
                       <th className="py-3 pr-4 hidden md:table-cell">Date</th>
                       <th className="py-3 pr-4 text-right">Montant</th>
@@ -90,11 +107,11 @@ export default function Dashboard() {
                   <tbody>
                     {recent.map((f) => (
                       <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30">
-                        <td className="py-3 pr-4 font-mono font-medium">{f.number}</td>
-                        <td className="py-3 pr-4">{f.clients?.nom || '-'}</td>
-                        <td className="py-3 pr-4 text-muted-foreground hidden md:table-cell">{formatDateShort(f.date)}</td>
-                        <td className="py-3 pr-4 text-right font-medium tabular-nums">{formatFCFA(Number(f.total_ttc))}</td>
-                        <td className="py-3 pr-4"><StatusBadge status={f.status} /></td>
+                        <td className="py-3 pr-4 font-mono font-medium">{f.numero}</td>
+                        <td className="py-3 pr-4">{f.client_nom || '-'}</td>
+                        <td className="py-3 pr-4 text-muted-foreground hidden md:table-cell">{formatDateShort(f.date_facture)}</td>
+                        <td className="py-3 pr-4 text-right font-medium tabular-nums">{formatFCFA(Number(f.montant_ttc))}</td>
+                        <td className="py-3 pr-4"><StatusBadge status={f.statut} /></td>
                         <td className="py-3 text-right hidden sm:table-cell">
                           <div className="inline-flex gap-1">
                             <Link to={`/factures/${f.id}`} title="Voir"><Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="h-4 w-4" /></Button></Link>

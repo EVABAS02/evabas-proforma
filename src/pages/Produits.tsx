@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,10 +31,21 @@ export default function Produits() {
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({ designation: '', unite: '', prix_unitaire: 0, categorie: 'Général' });
 
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    getUser();
+  }, []);
+
   const { data: products = [] } = useQuery({
-    queryKey: ['produits'],
+    queryKey: ['produits', userId],
+    enabled: !!userId,
     queryFn: async () => {
-      const { data, error } = await supabase.from('produits').select('*').order('designation');
+      const { data, error } = await supabase.from('produits').select('*').eq('user_id', userId).order('designation');
       if (error) throw error;
       return (data as Product[]) || [];
     },
@@ -59,8 +70,7 @@ export default function Produits() {
     e.preventDefault();
     if (!user) return;
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      const userId = authUser?.id;
+      if (!userId) throw new Error('Utilisateur non authentifie');
       const payload = {
         designation: form.designation,
         unite: form.unite || null,
