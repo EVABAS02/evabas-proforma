@@ -28,8 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: authUser.id,
             company_name: authUser.user_metadata?.company_name ?? 'Mon Entreprise',
             email: authUser.email ?? null,
-            phone: authUser.user_metadata?.phone ?? null,
-            role: 'user',
+            phone_whatsapp: authUser.user_metadata?.phone ?? null,
           });
         }
       } catch (err) {

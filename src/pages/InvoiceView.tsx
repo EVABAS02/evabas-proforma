@@ -76,7 +76,7 @@ export default function InvoiceView() {
     const message = encodeURIComponent(
       `Bonjour,\n\nVeuillez trouver ci-joint notre facture proforma.\n\n` +
       `Facture : ${invoice.number}\n` +
-      `Client : ${client?.name || 'Client'}\n` +
+      `Client : ${client?.nom || 'Client'}\n` +
       `Montant TTC : ${total} FCFA\n\n` +
       `Merci pour votre confiance.\n` +
       `- ${profile?.company_name || 'Notre entreprise'}`
@@ -111,8 +111,8 @@ export default function InvoiceView() {
           <div className="flex justify-between items-start pb-6 border-b-2 border-primary/20" style={{ color: '#000000' }}>
             <div>
               <h2 className="font-display text-2xl font-bold" style={{ color: '#000000' }}>{company}</h2>
-              {profile?.address && <p className="text-sm mt-1" style={{ color: '#000000' }}>{profile.address}</p>}
-              {profile?.phone && <p className="text-sm" style={{ color: '#000000' }}>Tel : {profile.phone}</p>}
+              {profile?.company_address && <p className="text-sm mt-1" style={{ color: '#000000' }}>{profile.company_address}</p>}
+              {profile?.phone_whatsapp && <p className="text-sm" style={{ color: '#000000' }}>Tel : {profile.phone_whatsapp}</p>}
               {profile?.email && <p className="text-sm" style={{ color: '#000000' }}>{profile.email}</p>}
             </div>
             <div className="text-right">
@@ -123,9 +123,9 @@ export default function InvoiceView() {
 
           <div className="my-6">
             <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#000000' }}>Client</p>
-            <p className="font-bold text-lg" style={{ color: '#000000' }}>{client?.name || '-'}</p>
-            {client?.address && <p className="text-sm" style={{ color: '#000000' }}>{client.address}</p>}
-            {client?.phone && <p className="text-sm" style={{ color: '#000000' }}>Tel : {client.phone}</p>}
+            <p className="font-bold text-lg" style={{ color: '#000000' }}>{client?.nom || '-'}</p>
+            {client?.adresse && <p className="text-sm" style={{ color: '#000000' }}>{client.adresse}</p>}
+            {client?.telephone && <p className="text-sm" style={{ color: '#000000' }}>Tel : {client.telephone}</p>}
             {client?.ifu && <p className="text-sm" style={{ color: '#000000' }}>IFU : {client.ifu}</p>}
           </div>
 

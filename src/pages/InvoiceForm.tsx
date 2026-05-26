@@ -54,14 +54,14 @@ export default function InvoiceForm() {
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
-      const { data } = await supabase.from('clients').select('*').order('name');
+      const { data } = await supabase.from('clients').select('*').order('nom');
       return (data || []) as Client[];
     },
   });
   const { data: products = [] } = useQuery({
     queryKey: ['produits'],
     queryFn: async () => {
-      const { data } = await supabase.from('produits').select('*').order('name');
+      const { data } = await supabase.from('produits').select('*').order('designation');
       return (data || []) as Product[];
     },
   });
@@ -94,7 +94,7 @@ export default function InvoiceForm() {
   const pickProduct = (i: number, productId: string) => {
     const p = products.find(pp => pp.id === productId);
     if (!p) return;
-    updateItem(i, { product_id: p.id, designation: p.name, unit_price: p.price });
+    updateItem(i, { product_id: p.id, designation: p.designation, unit_price: p.prix_unitaire });
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -105,12 +105,20 @@ export default function InvoiceForm() {
     }
     setLoading(true);
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const userId = authUser?.id;
       const isManualClient = clientId === MANUAL;
       let resolvedClientId = isManualClient || !clientId ? null : clientId;
       if (isManualClient && manualClientName.trim()) {
         const { data: createdClient, error: clientError } = await supabase
           .from('clients')
-          .insert({ company_id: user.id, name: manualClientName.trim() })
+          .insert({
+            nom: manualClientName.trim(),
+            telephone: null,
+            ifu: null,
+            adresse: null,
+            user_id: userId,
+          })
           .select('id')
           .single();
         if (clientError) throw clientError;
@@ -124,6 +132,7 @@ export default function InvoiceForm() {
         total_ht: Math.round(totalHT),
         total_ttc: Math.round(totalTTC),
         created_by: user.id,
+        user_id: userId,
       };
       let invoiceId = id!;
       if (editing) {
@@ -178,7 +187,7 @@ export default function InvoiceForm() {
                 <Select value={clientId} onValueChange={setClientId}>
                   <SelectTrigger><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
                   <SelectContent>
-                    {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>)}
                     <SelectItem value={MANUAL}>✏️ Saisir manuellement</SelectItem>
                   </SelectContent>
                 </Select>
@@ -231,7 +240,7 @@ export default function InvoiceForm() {
                           <Select value={it.product_id || ''} onValueChange={(v) => pickProduct(i, v)}>
                             <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
                             <SelectContent>
-                              {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                              {products.map(p => <SelectItem key={p.id} value={p.id}>{p.designation}</SelectItem>)}
                             </SelectContent>
                           </Select>
                         </div>

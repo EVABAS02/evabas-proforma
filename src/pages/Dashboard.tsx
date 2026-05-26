@@ -30,7 +30,7 @@ export default function Dashboard() {
   const { data: recent = [] } = useQuery({
     queryKey: ['recent-invoices'],
     queryFn: async () => {
-      const { data } = await supabase.from('invoices').select('*, clients(name)').order('date', { ascending: false }).limit(8);
+      const { data } = await supabase.from('invoices').select('*, clients(nom)').order('date', { ascending: false }).limit(8);
       return data || [];
     },
   });
@@ -91,7 +91,7 @@ export default function Dashboard() {
                     {recent.map((f) => (
                       <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30">
                         <td className="py-3 pr-4 font-mono font-medium">{f.number}</td>
-                        <td className="py-3 pr-4">{f.clients?.name || '-'}</td>
+                        <td className="py-3 pr-4">{f.clients?.nom || '-'}</td>
                         <td className="py-3 pr-4 text-muted-foreground hidden md:table-cell">{formatDateShort(f.date)}</td>
                         <td className="py-3 pr-4 text-right font-medium tabular-nums">{formatFCFA(Number(f.total_ttc))}</td>
                         <td className="py-3 pr-4"><StatusBadge status={f.status} /></td>

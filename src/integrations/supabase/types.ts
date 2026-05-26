@@ -13,55 +13,58 @@ export type Database = {
         Row: {
           id: string
           company_name: string | null
+          company_address: string | null
+          company_city: string | null
           email: string | null
-          phone: string | null
-          address: string | null
+          phone_whatsapp: string | null
           regime_fiscal: string | null
-          role: string | null
+          created_at: string | null
         }
         Insert: {
           id: string
           company_name?: string | null
+          company_address?: string | null
+          company_city?: string | null
           email?: string | null
-          phone?: string | null
-          address?: string | null
+          phone_whatsapp?: string | null
           regime_fiscal?: string | null
-          role?: string | null
+          created_at?: string | null
         }
         Update: {
           id?: string
           company_name?: string | null
+          company_address?: string | null
+          company_city?: string | null
           email?: string | null
-          phone?: string | null
-          address?: string | null
+          phone_whatsapp?: string | null
           regime_fiscal?: string | null
-          role?: string | null
+          created_at?: string | null
         }
         Relationships: []
       }
       clients: {
         Row: {
           id: string
-          company_id: string
-          name: string
-          address: string | null
-          phone: string | null
+          user_id: string | null
+          nom: string
+          adresse: string | null
+          telephone: string | null
           ifu: string | null
         }
         Insert: {
           id?: string
-          company_id: string
-          name: string
-          address?: string | null
-          phone?: string | null
+          user_id?: string | null
+          nom: string
+          adresse?: string | null
+          telephone?: string | null
           ifu?: string | null
         }
         Update: {
           id?: string
-          company_id?: string
-          name?: string
-          address?: string | null
-          phone?: string | null
+          user_id?: string | null
+          nom?: string
+          adresse?: string | null
+          telephone?: string | null
           ifu?: string | null
         }
         Relationships: []
@@ -69,24 +72,30 @@ export type Database = {
       produits: {
         Row: {
           id: string
-          company_id: string
-          name: string
-          price: number
-          unit: string | null
+          user_id: string | null
+          designation: string
+          unite: string | null
+          prix_unitaire: number
+          categorie: string | null
+          created_at: string | null
         }
         Insert: {
           id?: string
-          company_id: string
-          name: string
-          price?: number
-          unit?: string | null
+          user_id?: string | null
+          designation: string
+          unite?: string | null
+          prix_unitaire?: number
+          categorie?: string | null
+          created_at?: string | null
         }
         Update: {
           id?: string
-          company_id?: string
-          name?: string
-          price?: number
-          unit?: string | null
+          user_id?: string | null
+          designation?: string
+          unite?: string | null
+          prix_unitaire?: number
+          categorie?: string | null
+          created_at?: string | null
         }
         Relationships: []
       }
@@ -94,6 +103,7 @@ export type Database = {
         Row: {
           id: string
           company_id: string
+          user_id: string | null
           client_id: string | null
           number: string
           date: string
@@ -105,6 +115,7 @@ export type Database = {
         Insert: {
           id?: string
           company_id: string
+          user_id?: string | null
           client_id?: string | null
           number: string
           date: string
@@ -116,6 +127,7 @@ export type Database = {
         Update: {
           id?: string
           company_id?: string
+          user_id?: string | null
           client_id?: string | null
           number?: string
           date?: string

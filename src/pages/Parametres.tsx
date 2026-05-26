@@ -15,18 +15,17 @@ export default function Parametres() {
   const { user } = useAuth();
   const { data: profile } = useProfile();
   const qc = useQueryClient();
-  const [form, setForm] = useState({ company_name: '', address: '', phone: '', email: '', regime_fiscal: '', role: 'user' });
+  const [form, setForm] = useState({ company_name: '', adresse: '', telephone: '', email: '', regime_fiscal: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (profile) {
       setForm({
         company_name: profile.company_name || '',
-        address: profile.address || '',
-        phone: profile.phone || '',
+        adresse: profile.company_address || '',
+        telephone: profile.phone_whatsapp || '',
         email: profile.email || '',
         regime_fiscal: profile.regime_fiscal || '',
-        role: profile.role || 'user',
       });
     }
   }, [profile]);
@@ -35,7 +34,14 @@ export default function Parametres() {
     e.preventDefault();
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from('profiles').upsert({ id: user.id, ...form });
+    const payload = {
+      company_name: form.company_name,
+      company_address: form.adresse || null,
+      phone_whatsapp: form.telephone || null,
+      email: form.email || null,
+      regime_fiscal: form.regime_fiscal,
+    };
+    const { error } = await supabase.from('profiles').update(payload).eq('id', user.id);
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success('Paramètres enregistrés');
@@ -55,10 +61,10 @@ export default function Parametres() {
             <form onSubmit={save} className="space-y-4">
               <div><Label>Nom de l'entreprise *</Label><Input value={form.company_name} onChange={e => setForm({ ...form, company_name: e.target.value })} required /></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="sm:col-span-2"><Label>Adresse</Label><Input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>
+                <div className="sm:col-span-2"><Label>Adresse</Label><Input value={form.adresse} onChange={e => setForm({ ...form, adresse: e.target.value })} /></div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><Label>Telephone</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="+229 ..." /></div>
+                <div><Label>Telephone</Label><Input value={form.telephone} onChange={e => setForm({ ...form, telephone: e.target.value })} placeholder="+229 ..." /></div>
                 <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
               </div>
               <div className="pt-2">

@@ -21,14 +21,14 @@ export default function Factures() {
   const { data: invoices = [] } = useQuery({
     queryKey: ['invoices'],
     queryFn: async () => {
-      const { data } = await supabase.from('invoices').select('*, clients(name)').order('date', { ascending: false });
+      const { data } = await supabase.from('invoices').select('*, clients(nom)').order('date', { ascending: false });
       return data || [];
     },
   });
 
   const filtered = invoices.filter(i =>
     i.number.toLowerCase().includes(search.toLowerCase()) ||
-    (i.clients?.name || '').toLowerCase().includes(search.toLowerCase())
+    (i.clients?.nom || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const updateStatus = async (id: string, status: typeof statuses[number]) => {
@@ -87,7 +87,7 @@ export default function Factures() {
                     {filtered.map((f) => (
                       <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30">
                         <td className="py-3 pr-4 font-mono font-medium">{f.number}</td>
-                        <td className="py-3 pr-4">{f.clients?.name || '-'}</td>
+                        <td className="py-3 pr-4">{f.clients?.nom || '-'}</td>
                         <td className="py-3 pr-4 text-muted-foreground">{formatDateShort(f.date)}</td>
                         <td className="py-3 pr-4 text-right tabular-nums">{formatFCFA(Number(f.total_ttc))}</td>
                         <td className="py-3 pr-4">
