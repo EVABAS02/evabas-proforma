@@ -88,6 +88,13 @@ export default function InvoiceForm() {
       }
       setDate(inv.date_facture);
       setStatus(inv.statut as InvoiceStatus);
+      // Recharge l'état TVA/AIB de la facture existante — sinon ces cases
+      // repartent à zéro à chaque modification et écrasent les vrais montants.
+      setApplyTVA(!!inv.apply_tva);
+      setApplyAIB(!!(inv as any).apply_aib);
+      if ((inv as any).aib_rate) {
+        setAibRate((inv as any).aib_rate === 0.05 ? 0.05 : 0.01);
+      }
       const { data: its } = await supabase.from('facture_articles').select('*').eq('facture_id', id!);
       setItems((its || []).map(it => ({
         id: it.id,
@@ -128,6 +135,9 @@ export default function InvoiceForm() {
       const isManualClient = clientId === MANUAL;
       let resolvedClientId = isManualClient || !clientId ? null : clientId;
       let selectedClientName: string | null = null;
+      let selectedClientAdresse: string | null = null;
+      let selectedClientTelephone: string | null = null;
+      let selectedClientIfu: string | null = null;
       if (isManualClient && manualClientName.trim()) {
         const { data: createdClient, error: clientError } = await supabase
           .from('clients')
@@ -146,6 +156,9 @@ export default function InvoiceForm() {
       } else if (resolvedClientId) {
         const selectedClient = clients.find(client => client.id === resolvedClientId);
         selectedClientName = selectedClient?.nom || null;
+        selectedClientAdresse = selectedClient?.adresse || null;
+        selectedClientTelephone = selectedClient?.telephone || null;
+        selectedClientIfu = selectedClient?.ifu || null;
       }
       const generatedNumber = `FP-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
       const invoicePayload = {
@@ -155,10 +168,16 @@ export default function InvoiceForm() {
         statut: status,
         client_id: resolvedClientId,
         client_nom: selectedClientName,
+        client_adresse: selectedClientAdresse,
+        client_telephone: selectedClientTelephone,
+        client_ifu: selectedClientIfu,
         montant_ht: Math.round(totalHT),
         montant_tva: Math.round(tva),
+        montant_aib: Math.round(aib),
         montant_ttc: Math.round(totalTTC),
         apply_tva: applyTVA,
+        apply_aib: applyAIB,
+        aib_rate: applyAIB ? aibRate : null,
       };
       let invoiceId = id!;
       if (editing) {

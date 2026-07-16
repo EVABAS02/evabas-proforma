@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Pencil, Download, Printer, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Pencil, Download, Printer, MessageCircle, Loader2 } from 'lucide-react';
 import { formatFCFA } from '@/lib/format';
 import { toast } from 'sonner';
 
@@ -26,8 +26,17 @@ type Facture = {
   client_ifu: string | null;
   montant_ht: number;
   montant_tva: number;
+  montant_aib: number | null;
   montant_ttc: number;
   apply_tva: boolean;
+  apply_aib: boolean | null;
+  aib_rate: number | null;
+};
+
+const STATUT_LABELS: Record<string, { label: string; bg: string; text: string }> = {
+  brouillon: { label: 'Brouillon', bg: '#f3f4f6', text: '#374151' },
+  envoyee: { label: 'Envoyée', bg: '#dbeafe', text: '#1e40af' },
+  payee: { label: 'Payée', bg: '#dcfce7', text: '#166534' },
 };
 
 export default function InvoiceView() {
@@ -38,6 +47,8 @@ export default function InvoiceView() {
   const [facture, setFacture] = useState<Facture | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -52,7 +63,7 @@ export default function InvoiceView() {
         nav('/factures');
         return;
       }
-      setFacture(inv as Facture);
+      setFacture(inv as unknown as Facture);
 
       const { data: arts } = await supabase
         .from('facture_articles')
@@ -71,44 +82,119 @@ export default function InvoiceView() {
     setTimeout(() => { document.title = orig; }, 500);
   };
 
-  const handlePDF = async () => {
-    if (!printRef.current || !facture) return;
-    toast.loading('Génération du PDF...', { id: 'pdf' });
-    const orig = document.title;
-    document.title = facture.numero;
+  // Génère le PDF en le découpant automatiquement sur autant de pages A4 que nécessaire,
+  // et masque tout élément .no-print (badge de statut, etc.) uniquement dans la capture.
+  const generatePdfBlob = async () => {
+    if (!printRef.current || !facture) return null;
     const el = printRef.current;
     const prevW = el.style.width;
     el.style.width = '794px';
+
+    const { default: html2canvas } = await import('html2canvas');
+    const { default: jsPDF } = await import('jspdf');
+
+    const canvas = await html2canvas(el, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      onclone: (clonedDoc) => {
+        clonedDoc.querySelectorAll('.no-print').forEach((elToHide) => {
+          (elToHide as HTMLElement).style.display = 'none';
+        });
+      },
+    });
+    el.style.width = prevW;
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = pdf.internal.pageSize.getHeight();
+    const pageHeightPx = (pdfH * canvas.width) / pdfW;
+
+    let renderedHeightPx = 0;
+    let pageIndex = 0;
+
+    while (renderedHeightPx < canvas.height) {
+      const sliceHeightPx = Math.min(pageHeightPx, canvas.height - renderedHeightPx);
+
+      const pageCanvas = document.createElement('canvas');
+      pageCanvas.width = canvas.width;
+      pageCanvas.height = sliceHeightPx;
+      const ctx = pageCanvas.getContext('2d');
+      ctx?.drawImage(
+        canvas,
+        0, renderedHeightPx, canvas.width, sliceHeightPx,
+        0, 0, canvas.width, sliceHeightPx
+      );
+
+      const pageImg = pageCanvas.toDataURL('image/jpeg', 0.95);
+      const sliceHeightMm = (sliceHeightPx * pdfW) / canvas.width;
+
+      if (pageIndex > 0) pdf.addPage();
+      pdf.addImage(pageImg, 'JPEG', 0, 0, pdfW, sliceHeightMm);
+
+      renderedHeightPx += sliceHeightPx;
+      pageIndex++;
+    }
+
+    return pdf;
+  };
+
+  const handlePDF = async () => {
+    if (!facture || isGeneratingPdf) return;
+    setIsGeneratingPdf(true);
+    toast.loading('Génération du PDF...', { id: 'pdf' });
+    const orig = document.title;
+    document.title = facture.numero;
     try {
-      const { default: html2canvas } = await import('html2canvas');
-      const { default: jsPDF } = await import('jspdf');
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-        useCORS: true,
-      });
-      el.style.width = prevW;
-      const img = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfW = pdf.internal.pageSize.getWidth();
-      const pdfH = (canvas.height * pdfW) / canvas.width;
-      pdf.addImage(img, 'JPEG', 0, 0, pdfW, pdfH);
+      const pdf = await generatePdfBlob();
+      if (!pdf) throw new Error('PDF non généré');
       pdf.save(`${facture.numero}.pdf`);
       toast.success('PDF téléchargé', { id: 'pdf' });
     } catch {
-      el.style.width = prevW;
-      toast.error('Erreur PDF', { id: 'pdf' });
+      toast.error('Erreur lors de la génération du PDF', { id: 'pdf' });
     } finally {
       document.title = orig;
+      setIsGeneratingPdf(false);
     }
   };
 
-  const handleWhatsApp = () => {
-    if (!facture) return;
-    const msg = encodeURIComponent(
-      `Facture ${facture.numero} de ${profile?.company_name || 'notre entreprise'} : ${window.location.href}`
-    );
-    window.open(`https://wa.me/?text=${msg}`, '_blank');
+  const handleWhatsApp = async () => {
+    if (!facture || isSharing) return;
+    setIsSharing(true);
+    toast.loading('Préparation du PDF...', { id: 'whatsapp' });
+    const orig = document.title;
+    document.title = facture.numero;
+    try {
+      const pdf = await generatePdfBlob();
+      if (!pdf) throw new Error('PDF non généré');
+      const pdfBlob = pdf.output('blob');
+      const file = new File([pdfBlob], `${facture.numero}.pdf`, { type: 'application/pdf' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Facture ${facture.numero}`,
+          text: `Facture ${facture.numero} de ${profile?.company_name || 'notre entreprise'}`,
+        });
+        toast.success('Partagé', { id: 'whatsapp' });
+      } else {
+        pdf.save(`${facture.numero}.pdf`);
+        const msg = encodeURIComponent(
+          `Facture ${facture.numero} de ${profile?.company_name || 'notre entreprise'} — le PDF vient d'être téléchargé, joignez-le à ce message.`
+        );
+        window.open(`https://wa.me/?text=${msg}`, '_blank');
+        toast.success('PDF téléchargé — joignez-le sur WhatsApp', { id: 'whatsapp' });
+      }
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') {
+        toast.error('Erreur lors du partage', { id: 'whatsapp' });
+      } else {
+        toast.dismiss('whatsapp');
+      }
+    } finally {
+      document.title = orig;
+      setIsSharing(false);
+    }
   };
 
   if (loading) {
@@ -125,7 +211,9 @@ export default function InvoiceView() {
 
   const montantHT = Number(facture.montant_ht) || 0;
   const montantTVA = Number(facture.montant_tva) || 0;
+  const montantAIB = Number(facture.montant_aib) || 0;
   const montantTTC = Number(facture.montant_ttc) || 0;
+  const statutInfo = STATUT_LABELS[facture.statut] || STATUT_LABELS.brouillon;
 
   const formatDateFR = (d: string) => {
     if (!d) return '-';
@@ -135,7 +223,7 @@ export default function InvoiceView() {
 
   return (
     <AppLayout>
-   <style>{`
+      <style>{`
   @media print {
     @page {
       size: A4;
@@ -153,14 +241,15 @@ export default function InvoiceView() {
       visibility: visible !important;
     }
     #invoice-card {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
+      position: static !important;
       width: 100% !important;
       box-shadow: none !important;
       border-radius: 0 !important;
-      padding: 20px !important;
+      padding: 0 !important;
     }
+    table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; page-break-after: auto; }
+    thead { display: table-header-group; }
     .no-print { display: none !important; }
   }
 `}</style>
@@ -183,9 +272,11 @@ export default function InvoiceView() {
             <Button
               size="sm"
               onClick={handlePDF}
-              className="gap-1 bg-yellow-500 hover:bg-yellow-600 text-white"
+              disabled={isGeneratingPdf}
+              className="gap-1 bg-yellow-500 hover:bg-yellow-600 text-white disabled:opacity-60"
             >
-              <Download className="h-4 w-4" /> PDF
+              {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              PDF
             </Button>
             <Button
               variant="outline"
@@ -198,9 +289,11 @@ export default function InvoiceView() {
             <Button
               size="sm"
               onClick={handleWhatsApp}
-              className="gap-1 bg-green-600 hover:bg-green-700 text-white"
+              disabled={isSharing}
+              className="gap-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-60"
             >
-              <MessageCircle className="h-4 w-4" /> WhatsApp
+              {isSharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
+              WhatsApp
             </Button>
           </div>
         </div>
@@ -247,6 +340,12 @@ export default function InvoiceView() {
               <p className="text-sm" style={{ color: '#000000' }}>
                 Date : {formatDateFR(facture.date_facture)}
               </p>
+              <span
+                className="no-print inline-block mt-2 px-2 py-0.5 rounded text-xs font-semibold"
+                style={{ backgroundColor: statutInfo.bg, color: statutInfo.text }}
+              >
+                {statutInfo.label}
+              </span>
             </div>
           </div>
 
@@ -264,7 +363,7 @@ export default function InvoiceView() {
               </p>
               {facture.client_adresse && (
                 <p className="text-sm" style={{ color: '#000000' }}>
-                  {facture.client_adresse}
+                Adresse : {facture.client_adresse}
                 </p>
               )}
               {facture.client_telephone && (
@@ -313,29 +412,40 @@ export default function InvoiceView() {
                 </tr>
               </thead>
               <tbody>
-                {articles.map((art, idx) => (
-                  <tr
-                    key={art.id}
-                    style={{ borderBottom: '1px solid #e5e7eb' }}
-                  >
-                    <td className="py-2 px-2" style={{ color: '#000000' }}>{idx + 1}</td>
-                    <td className="py-2 px-2" style={{ color: '#000000', overflow: 'hidden' }}>
-                      {art.designation}
-                    </td>
-                    <td className="py-2 px-2 text-right tabular-nums" style={{ color: '#000000' }}>
-                      {art.quantite}
-                    </td>
-                    <td className="py-2 px-2 text-right tabular-nums" style={{ color: '#000000' }}>
-                      {Number(art.prix_unitaire).toLocaleString('fr-FR')}
-                    </td>
-                    <td
-                      className="py-2 px-2 text-right tabular-nums font-medium"
-                      style={{ color: '#000000' }}
-                    >
-                      {(art.quantite * art.prix_unitaire).toLocaleString('fr-FR')}
+                {articles.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-6 text-center text-sm" style={{ color: '#6b7280' }}>
+                      Aucun article sur cette facture
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  articles.map((art, idx) => (
+                    <tr
+                      key={art.id}
+                      style={{ borderBottom: '1px solid #e5e7eb' }}
+                    >
+                      <td className="py-2 px-2" style={{ color: '#000000' }}>{idx + 1}</td>
+                      <td
+                        className="py-2 px-2"
+                        style={{ color: '#000000', overflowWrap: 'break-word', wordBreak: 'break-word' }}
+                      >
+                        {art.designation}
+                      </td>
+                      <td className="py-2 px-2 text-right tabular-nums" style={{ color: '#000000' }}>
+                        {art.quantite}
+                      </td>
+                      <td className="py-2 px-2 text-right tabular-nums" style={{ color: '#000000' }}>
+                        {Number(art.prix_unitaire).toLocaleString('fr-FR')}
+                      </td>
+                      <td
+                        className="py-2 px-2 text-right tabular-nums font-medium"
+                        style={{ color: '#000000' }}
+                      >
+                        {(art.quantite * art.prix_unitaire).toLocaleString('fr-FR')}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -351,6 +461,12 @@ export default function InvoiceView() {
                 <div className="flex justify-between" style={{ color: '#000000' }}>
                   <span>TVA (18%)</span>
                   <span className="tabular-nums">{formatFCFA(montantTVA)}</span>
+                </div>
+              )}
+              {facture.apply_aib && (
+                <div className="flex justify-between" style={{ color: '#000000' }}>
+                  <span>AIB ({facture.aib_rate === 0.05 ? '5' : '1'}%)</span>
+                  <span className="tabular-nums">{formatFCFA(montantAIB)}</span>
                 </div>
               )}
               <div
