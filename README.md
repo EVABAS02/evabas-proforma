@@ -34,8 +34,8 @@ Le projet local utilise le fichier `.env`.
 Exemple:
 
 ```env
-VITE_SUPABASE_PROJECT_ID="pjzrstrycwwnrkcigqdf"
-VITE_SUPABASE_URL="https://pjzrstrycwwnrkcigqdf.supabase.co"
+VITE_SUPABASE_PROJECT_ID="hfgvtvwcnkaiwridrqdx"
+VITE_SUPABASE_URL="https://hfgvtvwcnkaiwridrqdx.supabase.co"
 VITE_SUPABASE_ANON_KEY="colle_ta_publishable_key_ici"
 ```
 
