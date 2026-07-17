@@ -1,0 +1,10 @@
+# Evabas Proforma
+
+> Evabas Proforma est un outil pour créer et gérer des factures pro forma professionnelles en moins d'une minute. Gestion des clients, catalogue produits, génération de PDF et partage direct sur WhatsApp — pensé pour les entreprises africaines.
+
+## Pages principales
+
+- [Accueil](https://evabas-proforma-gamma.vercel.app/#accueil): présentation générale de l'outil
+- [Fonctionnalités](https://evabas-proforma-gamma.vercel.app/#fonctionnalites): gestion des clients, catalogue produits, génération de factures et export PDF
+- [Avantages](https://evabas-proforma-gamma.vercel.app/#avantages): pourquoi choisir Evabas Proforma
+- [Inscription / Connexion](https://evabas-proforma-gamma.vercel.app/auth): créer un compte ou se connecter
