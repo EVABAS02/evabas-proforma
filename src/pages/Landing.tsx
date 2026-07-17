@@ -111,7 +111,7 @@ export default function Landing() {
       <section id="fonctionnalites" className="py-12 sm:py-20 bg-[#F9FAFB]">
         <div className="container px-6">
           <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
-            <p className="text-xs font-bold tracking-[0.2em] text-[#6366F1] mb-3">FONCTIONNALITÉS</p>
+            <p className="text-xs font-bold tracking-[0.2em] text-[#4F46E5] mb-3">FONCTIONNALITÉS</p>
             <h2 className="font-display font-bold mb-4 text-[#0F172A]" style={{ fontSize: 'clamp(28px, 4vw, 40px)' }}>Tout ce dont vous avez besoin</h2>
             <p className="text-[#6B7280] text-base sm:text-lg">Une solution complète pour gérer vos factures proforma de A à Z.</p>
           </div>
@@ -167,7 +167,7 @@ export default function Landing() {
       <section id="avantages" className="py-12 sm:py-20 bg-[#F9FAFB]">
         <div className="container px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <div>
-            <p className="text-xs font-bold tracking-[0.2em] text-accent mb-3">AVANTAGES</p>
+            <p className="text-xs font-bold tracking-[0.2em] text-[#826620] mb-3">AVANTAGES</p>
             <h2 className="font-display font-bold mb-8 sm:mb-10 text-[#0F172A]" style={{ fontSize: 'clamp(28px, 4vw, 40px)' }}>Pourquoi choisir Evabas ?</h2>
             <div className="space-y-7">
               {advantages.map((a) => (
