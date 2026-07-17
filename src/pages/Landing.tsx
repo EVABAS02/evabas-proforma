@@ -62,6 +62,7 @@ export default function Landing() {
         )}
       </header>
 
+      <main>
       {/* HERO */}
       <section id="accueil" className="relative overflow-hidden bg-white" style={{ backgroundImage: 'radial-gradient(ellipse at center, #EEF2FF 0%, #FFFFFF 70%)' }}>
         <div className="container py-12 sm:py-20 md:py-28 px-6 relative">
@@ -218,6 +219,7 @@ export default function Landing() {
           </motion.div>
         </div>
       </section>
+      </main>
 
       {/* FOOTER */}
       <footer className="bg-[hsl(222_47%_11%)] text-white py-12 sm:py-16">
