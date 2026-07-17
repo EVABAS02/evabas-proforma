@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { LazyMotion, domAnimation, m } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Logo } from '@/components/Logo';
 import { Users2, LayoutGrid, FileDown, Zap, Send, ClipboardList, MessageCircle, Check, Star, Mail, Menu, X, ArrowRight } from 'lucide-react';
@@ -62,11 +62,12 @@ export default function Landing() {
         )}
       </header>
 
+      <LazyMotion features={domAnimation} strict>
       <main>
       {/* HERO */}
       <section id="accueil" className="relative overflow-hidden bg-white" style={{ backgroundImage: 'radial-gradient(ellipse at center, #EEF2FF 0%, #FFFFFF 70%)' }}>
         <div className="container py-12 sm:py-20 md:py-28 px-6 relative">
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
             className="max-w-4xl mx-auto text-center"
           >
@@ -103,7 +104,7 @@ export default function Landing() {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </m.div>
         </div>
       </section>
 
@@ -117,7 +118,7 @@ export default function Landing() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((f, i) => (
-              <motion.div key={f.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}>
+              <m.div key={f.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}>
                 <div className="group bg-white border border-[#E5E7EB] rounded-2xl p-6 h-full transition-all duration-300 ease-out hover:border-[#C7D2FE] hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)]">
                   <div
                     className="mb-5 flex items-center justify-center transition-colors duration-300 ease-out group-hover:bg-[#E0E7FF]"
@@ -128,7 +129,7 @@ export default function Landing() {
                   <h3 className="font-display text-xl font-bold mb-2 text-[#0F172A]">{f.title}</h3>
                   <p className="text-[#6B7280] text-sm leading-relaxed">{f.desc}</p>
                 </div>
-              </motion.div>
+              </m.div>
             ))}
           </div>
         </div>
@@ -140,7 +141,7 @@ export default function Landing() {
           <h2 className="font-display font-bold text-center mb-12 sm:mb-16 text-[#0F172A]" style={{ fontSize: 'clamp(28px, 4vw, 40px)' }}>Ils nous font confiance</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {testimonials.map((t, i) => (
-              <motion.div key={t.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
+              <m.div key={t.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
                 <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 h-full">
                   <div className="flex gap-0.5 mb-3">
                     {[...Array(5)].map((_, j) => <Star key={j} className="h-3.5 w-3.5 fill-[#F59E0B] text-[#F59E0B]" />)}
@@ -157,7 +158,7 @@ export default function Landing() {
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </m.div>
             ))}
           </div>
         </div>
@@ -184,7 +185,7 @@ export default function Landing() {
             </div>
           </div>
           {/* Invoice preview illustration */}
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
+          <m.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
             <div className="relative">
               <div className="absolute -inset-6 bg-gradient-to-br from-primary/20 to-accent/10 rounded-3xl blur-2xl" />
               <Card className="relative p-6 sm:p-8 shadow-soft border-border/60">
@@ -216,10 +217,11 @@ export default function Landing() {
                 </div>
               </Card>
             </div>
-          </motion.div>
+          </m.div>
         </div>
       </section>
       </main>
+      </LazyMotion>
 
       {/* FOOTER */}
       <footer className="bg-[hsl(222_47%_11%)] text-white py-12 sm:py-16">
