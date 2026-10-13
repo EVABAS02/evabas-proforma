@@ -28,3 +28,8 @@ dist-ssr
 .env.local
 .env.production
 supabase/.temp/
+
+# Donnees privees et fichiers generes
+supabase_export/
+.vite-dev.err
+*.tsbuildinfo
