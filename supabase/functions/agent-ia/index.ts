@@ -1,46 +1,54 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
-
-// Setup type definitions for built-in Supabase Runtime APIs
 import "@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "@supabase/server";
 
-console.log("Hello from Functions!");
+// Modeles essayes dans l'ordre : si le premier est indisponible, on passe au suivant.
+const MODELES = ["gemini-3.1-flash-lite", "gemini-3.5-flash"];
 
-// This endpoint uses 'publishable' | 'secret' access, apiKey is required.
-// Use publishable for Client-facing, key-validated endpoints
-// Use secret for Server-to-server, internal calls
-export default {
-  fetch: withSupabase({ auth: ["publishable", "secret"] }, async (req, ctx) => {
-    // Called by another service with a secret key
-    // ctx.supabaseAdmin bypasses RLS — use for privileged operations
-    /*
-    if (ctx.authMode === "secret") {
-      const { user_id } = await req.json();
-      const { data } = await ctx.supabaseAdmin.auth.admin.getUserById(user_id);
-
-      return Response.json({
-        email: data?.user?.email,
-      });
+async function appelerGemini(prompt: string, cle: string) {
+  for (const modele of MODELES) {
+    const reponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${modele}:generateContent`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": cle },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      },
+    );
+    if (reponse.ok) {
+      const data = await reponse.json();
+      return {
+        modele,
+        texte: data.candidates?.[0]?.content?.parts?.[0]?.text ?? "",
+        usage: data.usageMetadata ?? null,
+      };
     }
-    */
+    console.error(`Gemini ${modele} -> HTTP ${reponse.status}`);
+  }
+  return null;
+}
 
-    const { name } = await req.json();
+export default {
+  // auth: "user" = seul un utilisateur connecte peut appeler cette fonction.
+  fetch: withSupabase({ auth: "user" }, async (req) => {
+    const cle = Deno.env.get("GEMINI_API_KEY");
+    if (!cle) {
+      return Response.json({ error: "Configuration manquante" }, { status: 500 });
+    }
 
-    return Response.json({
-      message: `Hello ${name}!`,
-    });
+    let message = "";
+    try {
+      ({ message } = await req.json());
+    } catch {
+      // corps invalide : traite plus bas
+    }
+    if (typeof message !== "string" || message.trim() === "" || message.length > 2000) {
+      return Response.json({ error: "Message invalide" }, { status: 400 });
+    }
+
+    const resultat = await appelerGemini(message, cle);
+    if (!resultat) {
+      return Response.json({ error: "Service IA indisponible, reessayez" }, { status: 503 });
+    }
+    return Response.json(resultat);
   }),
 };
-
-/* To invoke locally:
-
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
-
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/agent-ia' \
-    --header 'apiKey: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH' \
-    --data '{"name":"Functions"}'
-
-*/
