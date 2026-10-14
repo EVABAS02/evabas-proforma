@@ -30,6 +30,7 @@ const InvoiceForm = lazy(() => import("./pages/InvoiceForm"));
 const InvoiceView = lazy(() => import("./pages/InvoiceView"));
 const Clients = lazy(() => import("./pages/Clients"));
 const Produits = lazy(() => import("./pages/Produits"));
+const Assistant = lazy(() => import("./pages/Assistant"));
 const Parametres = lazy(() => import("./pages/Parametres"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -74,6 +75,7 @@ const App = () => (
                 <Route path="/factures/:id/modifier" element={<InvoiceForm />} />
                 <Route path="/clients" element={<Clients />} />
                 <Route path="/produits" element={<Produits />} />
+                <Route path="/assistant" element={<Assistant />} />
                 <Route path="/parametres" element={<Parametres />} />
               </Route>
             </Route>
