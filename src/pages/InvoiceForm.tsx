@@ -18,6 +18,8 @@ import { toast as sonnerToast } from 'sonner';
 import { toast } from '@/hooks/use-toast';
 import { formatFCFA } from '@/lib/format';
 import { useProfile } from '@/hooks/useProfile';
+import { useLocation } from 'react-router-dom';
+import { lireBrouillon } from '@/lib/brouillonIA';
 
 type Client = Tables<'clients'>;
 type Product = Tables<'produits'>;
@@ -60,6 +62,37 @@ export default function InvoiceForm() {
     if (regime === 'tva') setApplyTVA(true);
     if (regime === 'tps') setApplyTVA(false);
   }, [regime, editing]);
+
+  // --- Brouillon prepare par l'assistant IA (ajout) : preremplit une NOUVELLE facture ---
+  const emplacement = useLocation();
+  useEffect(() => {
+    if (editing) return;
+    const brouillon = lireBrouillon(emplacement.state);
+    if (!brouillon) return;
+    if (brouillon.client) {
+      setClientId(brouillon.client.id);
+    } else if (brouillon.client_nom_saisi) {
+      setClientId(MANUAL);
+      setManualClientName(brouillon.client_nom_saisi);
+    }
+    if (brouillon.lignes.length > 0) {
+      setItems(brouillon.lignes.map(l => ({
+        product_id: l.produit_id,
+        designation: l.designation,
+        quantity: l.quantite,
+        unit_price: l.prix_unitaire ?? 0,
+        manual: !l.produit_id,
+      })));
+    }
+    const sansPrix = brouillon.lignes.filter(l => l.prix_unitaire === null).length;
+    sonnerToast.info(
+      "Brouillon de l'assistant charge : verifiez chaque ligne avant d'enregistrer." +
+        (sansPrix > 0 ? ` ${sansPrix} ligne(s) sans prix : a completer.` : ''),
+      { id: 'brouillon-ia' },
+    );
+    // On vide l'etat pour qu'un rafraichissement ne reapplique pas le brouillon.
+    nav(emplacement.pathname, { replace: true, state: null });
+  }, [emplacement.state, emplacement.pathname, editing, nav]);
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients', userId],

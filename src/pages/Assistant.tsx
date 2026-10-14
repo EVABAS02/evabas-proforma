@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { useNavigate } from 'react-router-dom';
+import { CLE_ETAT_BROUILLON } from '@/lib/brouillonIA';
 
 type SourcePrix = 'phrase' | 'catalogue' | 'a_completer';
 
@@ -64,6 +66,11 @@ export default function Assistant() {
   const [texte, setTexte] = useState('');
   const [chargement, setChargement] = useState(false);
   const [brouillon, setBrouillon] = useState<Brouillon | null>(null);
+  const nav = useNavigate();
+  const ouvrirDansLeFormulaire = () => {
+    if (!brouillon) return;
+    nav('/factures/nouveau', { state: { [CLE_ETAT_BROUILLON]: brouillon } });
+  };
 
   const preparer = async () => {
     const message = texte.trim();
@@ -213,6 +220,13 @@ export default function Assistant() {
                   </ul>
                 </div>
               )}
+
+              <Button
+                onClick={ouvrirDansLeFormulaire}
+                disabled={brouillon.lignes.length === 0 && !brouillon.client && !brouillon.client_nom_saisi}
+              >
+                Ouvrir dans le formulaire de facture
+              </Button>
 
               <p className="text-xs text-muted-foreground">
                 Ce brouillon n'est pas enregistré. Les totaux, la TVA et l'AIB seront calculés par
