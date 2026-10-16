@@ -190,6 +190,54 @@ const OUTILS_DECLARES = [
       required: ["lignes"],
     },
   },
+  {
+    name: "classement_clients",
+    description:
+      "Classe les clients par montant facture (TTC) sur une periode : meilleurs clients. Renvoie nombre de factures et total par client. Dates AAAA-MM-JJ.",
+    parameters: {
+      type: "object",
+      properties: {
+        date_debut: { type: "string", description: "Premier jour inclus (AAAA-MM-JJ)" },
+        date_fin: { type: "string", description: "Dernier jour inclus (AAAA-MM-JJ)" },
+        limite: { type: "number", description: "Nombre de clients a renvoyer (5 par defaut, 20 maximum)" },
+      },
+      required: ["date_debut", "date_fin"],
+    },
+  },
+  {
+    name: "classement_produits",
+    description:
+      "Classe les produits (articles) les plus vendus sur une periode, par montant et par quantite. Dates AAAA-MM-JJ.",
+    parameters: {
+      type: "object",
+      properties: {
+        date_debut: { type: "string", description: "Premier jour inclus (AAAA-MM-JJ)" },
+        date_fin: { type: "string", description: "Dernier jour inclus (AAAA-MM-JJ)" },
+        limite: { type: "number", description: "Nombre de produits a renvoyer (5 par defaut, 20 maximum)" },
+      },
+      required: ["date_debut", "date_fin"],
+    },
+  },
+  {
+    name: "details_facture",
+    description:
+      "Donne le detail d'une facture a partir de son numero (ou d'une partie du numero) : en-tete, lignes, montants.",
+    parameters: {
+      type: "object",
+      properties: { numero: { type: "string", description: "Numero de la facture, par exemple FP-2026-123456" } },
+      required: ["numero"],
+    },
+  },
+  {
+    name: "evolution_mensuelle",
+    description:
+      "Nombre de factures et total TTC mois par mois pour une annee donnee.",
+    parameters: {
+      type: "object",
+      properties: { annee: { type: "number", description: "Annee sur 4 chiffres, par exemple 2026" } },
+      required: ["annee"],
+    },
+  },
 ];
 
 function consigne(): string {
@@ -199,6 +247,7 @@ Date du jour : ${aujourdhui()} (fuseau du Benin).
 REGLES
 - Pour TOUT chiffre, liste ou verification, utilise les outils. Ne calcule rien toi-meme et n'invente jamais de donnee.
 - Convertis les periodes en dates AAAA-MM-JJ (par exemple "ce mois-ci" = du premier au dernier jour du mois en cours ; "octobre" sans annee = octobre de l'annee en cours ; "2025" = du 2025-01-01 au 2025-12-31).
+- Classements (meilleurs clients, produits les plus vendus) : classement_clients et classement_produits. Detail d'une facture : details_facture. Chiffres mois par mois : evolution_mensuelle.
 - Statuts des factures : brouillon, envoyee, payee. Une facture "impayee" ou "en attente de paiement" a le statut envoyee.
 - Si plusieurs clients ou produits correspondent, ou si une information manque (par exemple une quantite), pose UNE question courte a l'utilisateur au lieu de deviner.
 - Pour une demande de proforma : cherche le client et chaque produit, puis appelle preparer_proforma. N'appelle preparer_proforma que si l'utilisateur a donne lui-meme toutes les quantites (jamais de quantite par defaut, jamais 1 par defaut) : sinon demande-les. Dis ensuite ce qui est a verifier. Rien n'est enregistre : l'utilisateur valide dans le formulaire de facture.
@@ -210,61 +259,74 @@ REGLES
 
 type ReponseGemini = { contenu: Contenu; texte: string; appels: { name: string; args: Record<string, unknown> }[]; tokens: number };
 
+const STATUTS_TRANSITOIRES = [429, 500, 502, 503, 504];
+const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 async function appelerGemini(
   contents: Contenu[],
   cle: string,
   modeleImpose: string | null,
+  echeance: number,
 ): Promise<{ modele: string; reponse: ReponseGemini } | null> {
   const candidats = modeleImpose ? [modeleImpose] : MODELES;
   for (const modele of candidats) {
-    try {
-      const reponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${modele}:generateContent`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": cle },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: consigne() }] },
-            contents,
-            tools: [{ functionDeclarations: OUTILS_DECLARES }],
-            generationConfig: { temperature: 0 },
-          }),
-          signal: AbortSignal.timeout(25000),
-        },
-      );
-      if (!reponse.ok) {
-        console.error(`Gemini ${modele} -> HTTP ${reponse.status}`);
-        continue;
+    // Deux essais par modele : une surcharge de Gemini est le plus souvent passagere.
+    for (let essai = 1; essai <= 2; essai++) {
+      if (Date.now() > echeance) return null;
+      try {
+        const reponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modele}:generateContent`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-goog-api-key": cle },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: consigne() }] },
+              contents,
+              tools: [{ functionDeclarations: OUTILS_DECLARES }],
+              generationConfig: { temperature: 0 },
+            }),
+            signal: AbortSignal.timeout(20000),
+          },
+        );
+        if (!reponse.ok) {
+          console.error(`Gemini ${modele} essai ${essai} -> HTTP ${reponse.status}`);
+          if (STATUTS_TRANSITOIRES.includes(reponse.status) && essai < 2) {
+            await pause(1200);
+            continue;
+          }
+          break; // erreur definitive : on passe au modele suivant
+        }
+        const data = await reponse.json();
+        const contenu = data.candidates?.[0]?.content;
+        const parties: Partie[] = Array.isArray(contenu?.parts) ? contenu.parts : [];
+        const appels = parties
+          .filter((p) => typeof p.functionCall === "object" && p.functionCall !== null)
+          .map((p) => {
+            const fc = p.functionCall as { name?: unknown; args?: unknown };
+            return {
+              name: String(fc.name ?? ""),
+              args: typeof fc.args === "object" && fc.args !== null ? fc.args as Record<string, unknown> : {},
+            };
+          });
+        const texte = parties
+          .filter((p) => typeof p.text === "string" && p.thought !== true)
+          .map((p) => p.text as string)
+          .join("")
+          .trim();
+        return {
+          modele,
+          reponse: {
+            // On renvoie tel quel le contenu du modele (il contient ses "signatures de reflexion").
+            contenu: { role: "model", parts: parties },
+            texte,
+            appels,
+            tokens: Number(data.usageMetadata?.totalTokenCount ?? 0),
+          },
+        };
+      } catch (erreur) {
+        console.error(`Gemini ${modele} essai ${essai} -> erreur reseau ou delai depasse`, String(erreur));
+        if (essai < 2) await pause(1200);
       }
-      const data = await reponse.json();
-      const contenu = data.candidates?.[0]?.content;
-      const parties: Partie[] = Array.isArray(contenu?.parts) ? contenu.parts : [];
-      const appels = parties
-        .filter((p) => typeof p.functionCall === "object" && p.functionCall !== null)
-        .map((p) => {
-          const fc = p.functionCall as { name?: unknown; args?: unknown };
-          return {
-            name: String(fc.name ?? ""),
-            args: typeof fc.args === "object" && fc.args !== null ? fc.args as Record<string, unknown> : {},
-          };
-        });
-      const texte = parties
-        .filter((p) => typeof p.text === "string" && p.thought !== true)
-        .map((p) => p.text as string)
-        .join("")
-        .trim();
-      return {
-        modele,
-        reponse: {
-          // On renvoie tel quel le contenu du modele (il contient ses "signatures de reflexion").
-          contenu: { role: "model", parts: parties },
-          texte,
-          appels,
-          tokens: Number(data.usageMetadata?.totalTokenCount ?? 0),
-        },
-      };
-    } catch (erreur) {
-      console.error(`Gemini ${modele} -> erreur reseau ou delai depasse`, String(erreur));
     }
   }
   return null;
@@ -340,6 +402,24 @@ export default {
 
     const somme = (lignes: Ligne[], champ: string) =>
       lignes.reduce((s, f) => s + (nombre(f[champ]) ?? 0), 0);
+
+    const chargerArticles = async (ids: string[]): Promise<Ligne[]> => {
+      const tous: Ligne[] = [];
+      for (let i = 0; i < ids.length; i += 40) {
+        const { data, error } = await ctx.supabase
+          .from("facture_articles")
+          .select("facture_id, produit_id, designation, quantite, prix_unitaire")
+          .in("facture_id", ids.slice(i, i + 40));
+        if (error) throw new Error("lecture articles");
+        tous.push(...((data ?? []) as Ligne[]));
+      }
+      return tous;
+    };
+
+    const limiteClassement = (v: unknown): number => {
+      const n = nombre(v);
+      return n === null ? 5 : Math.min(20, Math.max(1, Math.round(n)));
+    };
 
     const outils: Record<string, (a: Record<string, unknown>) => Promise<unknown>> = {
       chercher_clients: async (a) => {
@@ -425,6 +505,113 @@ export default {
         };
       },
 
+      classement_clients: async (a) => {
+        if (!estDate(a.date_debut) || !estDate(a.date_fin)) return { erreur: "dates invalides (AAAA-MM-JJ)" };
+        const factures = await facturesPeriode(a.date_debut, a.date_fin, null, null, 500);
+        const groupes = new Map<string, { client: string; nombre: number; total_ttc: number }>();
+        let sansClient = { nombre: 0, total_ttc: 0 };
+        for (const f of factures) {
+          const nom = chaine(f.client_nom);
+          const ttc = nombre(f.montant_ttc) ?? 0;
+          if (!nom) {
+            sansClient = { nombre: sansClient.nombre + 1, total_ttc: sansClient.total_ttc + ttc };
+            continue;
+          }
+          const cle = chaine(f.client_id, 60) || normaliser(nom);
+          const g = groupes.get(cle) ?? { client: nom, nombre: 0, total_ttc: 0 };
+          g.nombre += 1;
+          g.total_ttc += ttc;
+          groupes.set(cle, g);
+        }
+        const classement = [...groupes.values()]
+          .sort((x, y) => y.total_ttc - x.total_ttc)
+          .slice(0, limiteClassement(a.limite))
+          .map((g) => ({ ...g, total_ttc: Math.round(g.total_ttc) }));
+        return {
+          factures_analysees: factures.length,
+          limite_atteinte: factures.length >= 500,
+          classement,
+          factures_sans_client: { nombre: sansClient.nombre, total_ttc: Math.round(sansClient.total_ttc) },
+        };
+      },
+
+      classement_produits: async (a) => {
+        if (!estDate(a.date_debut) || !estDate(a.date_fin)) return { erreur: "dates invalides (AAAA-MM-JJ)" };
+        const factures = await facturesPeriode(a.date_debut, a.date_fin, null, null, 300);
+        const articles = await chargerArticles(factures.map((f) => String(f.id)));
+        const groupes = new Map<string, { produit: string; quantite: number; montant_ht: number }>();
+        for (const x of articles) {
+          const nom = chaine(x.designation, 300);
+          if (!nom) continue;
+          const cle = chaine(x.produit_id, 60) || normaliser(nom);
+          const q = nombre(x.quantite) ?? 0;
+          const g = groupes.get(cle) ?? { produit: nom, quantite: 0, montant_ht: 0 };
+          g.quantite += q;
+          g.montant_ht += q * (nombre(x.prix_unitaire) ?? 0);
+          groupes.set(cle, g);
+        }
+        const n = limiteClassement(a.limite);
+        const liste = [...groupes.values()].map((g) => ({ ...g, montant_ht: Math.round(g.montant_ht) }));
+        return {
+          factures_analysees: factures.length,
+          limite_atteinte: factures.length >= 300,
+          par_montant: [...liste].sort((x, y) => y.montant_ht - x.montant_ht).slice(0, n),
+          par_quantite: [...liste].sort((x, y) => y.quantite - x.quantite).slice(0, n),
+        };
+      },
+
+      details_facture: async (a) => {
+        const t = chaine(a.numero, 60).replace(/[%_,()\\]/g, "");
+        if (t === "") return { erreur: "numero vide" };
+        const { data, error } = await ctx.supabase
+          .from("factures").select("*").ilike("numero", `%${t}%`).order("date_facture", { ascending: false }).limit(5);
+        if (error) throw new Error("lecture facture");
+        const trouvees = (data ?? []) as Ligne[];
+        if (trouvees.length === 0) return { trouvee: false };
+        if (trouvees.length > 1) {
+          return {
+            trouvee: false,
+            plusieurs_correspondances: trouvees.map((f) => ({ numero: f.numero, date: f.date_facture, client: f.client_nom })),
+          };
+        }
+        const f = trouvees[0];
+        const lignes = await chargerArticles([String(f.id)]);
+        return {
+          trouvee: true,
+          numero: f.numero, date: f.date_facture, statut: f.statut, client: f.client_nom,
+          montant_ht: nombre(f.montant_ht), montant_tva: nombre(f.montant_tva),
+          montant_aib: nombre(f.montant_aib), montant_ttc: nombre(f.montant_ttc),
+          lignes: lignes.slice(0, 40).map((x) => ({
+            designation: x.designation, quantite: nombre(x.quantite), prix_unitaire: nombre(x.prix_unitaire),
+            total_ligne: Math.round((nombre(x.quantite) ?? 0) * (nombre(x.prix_unitaire) ?? 0)),
+          })),
+        };
+      },
+
+      evolution_mensuelle: async (a) => {
+        const annee = nombre(a.annee);
+        if (annee === null || annee < 2000 || annee > 2100) return { erreur: "annee invalide" };
+        const an = String(Math.round(annee));
+        const factures = await facturesPeriode(`${an}-01-01`, `${an}-12-31`, null, null, 1000);
+        const mois = Array.from({ length: 12 }, (_, i) => ({
+          mois: `${an}-${String(i + 1).padStart(2, "0")}`, nombre: 0, total_ttc: 0,
+        }));
+        for (const f of factures) {
+          const m = chaine(f.date_facture, 10).slice(5, 7);
+          const i = Number(m) - 1;
+          if (i >= 0 && i < 12) {
+            mois[i].nombre += 1;
+            mois[i].total_ttc += nombre(f.montant_ttc) ?? 0;
+          }
+        }
+        return {
+          annee: Number(an),
+          limite_atteinte: factures.length >= 1000,
+          mois: mois.map((m) => ({ ...m, total_ttc: Math.round(m.total_ttc) })),
+          total_annee_ttc: Math.round(somme(factures, "montant_ttc")),
+        };
+      },
+
       preparer_proforma: async (a) => {
         const lc = await clients();
         const lp = await produits();
@@ -495,7 +682,7 @@ export default {
 
     for (let etape = 0; etape < MAX_ETAPES; etape++) {
       if (Date.now() - debutTotal > DELAI_TOTAL_MS) break;
-      const r = await appelerGemini(contents, cle, modele);
+      const r = await appelerGemini(contents, cle, modele, debutTotal + DELAI_TOTAL_MS);
       if (!r) return Response.json({ error: "Service IA indisponible, reessayez" }, { status: 503 });
       modele = r.modele;
       tokens += r.reponse.tokens;
