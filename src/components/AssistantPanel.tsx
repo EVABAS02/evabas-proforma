@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, RotateCcw, Send, Sparkles } from 'lucide-react';
+import { ImagePlus, Loader2, RotateCcw, Send, Sparkles, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,8 @@ type Entree = {
   text: string;
   brouillon?: Brouillon | null;
   erreur?: boolean;
+  avecImage?: boolean;
+  apercu?: string;
 };
 
 type ReponseAssistant = { reponse?: unknown; brouillon?: unknown };
@@ -58,19 +61,59 @@ async function lireErreur(erreur: unknown): Promise<string> {
   return defaut;
 }
 
+type PhotoJointe = { mime: string; data: string; apercu: string };
+
+const TAILLE_MAX_FICHIER = 15 * 1024 * 1024;
+const TAILLE_MAX_BASE64 = 1_500_000;
+const TEXTE_PHOTO = 'Prépare une proforma à partir de ce bon de commande.';
+
+// Réduit la photo (dimensions et qualité) pour qu'elle reste légère à envoyer.
+async function preparerImage(fichier: File): Promise<PhotoJointe> {
+  if (!fichier.type.startsWith('image/')) throw new Error("Ce fichier n'est pas une image.");
+  if (fichier.size > TAILLE_MAX_FICHIER) throw new Error('Image trop lourde (15 Mo maximum).');
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(fichier);
+  } catch {
+    throw new Error("Format d'image non pris en charge (utilisez JPEG, PNG ou WebP).");
+  }
+  try {
+    for (const cote of [1280, 1024, 800]) {
+      const echelle = Math.min(1, cote / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(bitmap.width * echelle));
+      canvas.height = Math.max(1, Math.round(bitmap.height * echelle));
+      const contexte = canvas.getContext('2d');
+      if (!contexte) throw new Error('Image illisible.');
+      contexte.fillStyle = '#ffffff';
+      contexte.fillRect(0, 0, canvas.width, canvas.height);
+      contexte.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      for (const qualite of [0.8, 0.65, 0.5]) {
+        const url = canvas.toDataURL('image/jpeg', qualite);
+        const data = url.slice(url.indexOf(',') + 1);
+        if (data.length <= TAILLE_MAX_BASE64) return { mime: 'image/jpeg', data, apercu: url };
+      }
+    }
+  } finally {
+    bitmap.close();
+  }
+  throw new Error('Impossible de réduire cette image : essayez une photo plus petite.');
+}
+
 // Envoie la conversation à la fonction « assistant » (un seul réessai automatique).
 async function demander(
   historique: Entree[],
+  photo: PhotoJointe | null,
 ): Promise<{ texte: string; brouillon: Brouillon | null }> {
   const messages = historique
     .filter((e) => !e.erreur)
     .slice(-MAX_HISTORIQUE)
-    .map((e) => ({ role: e.role, text: e.text }));
+    .map((e) => ({ role: e.role, text: e.text, ...(e.avecImage ? { avec_image: true } : {}) }));
 
   let derniere = "L'assistant est indisponible pour le moment.";
   for (let essai = 0; essai < 2; essai++) {
     const { data, error } = await supabase.functions.invoke<ReponseAssistant>('assistant', {
-      body: { messages },
+      body: { messages, ...(photo ? { image: { mime_type: photo.mime, data: photo.data } } : {}) },
     });
     if (!error && data && typeof data.reponse === 'string') {
       return {
@@ -193,6 +236,9 @@ export default function AssistantPanel() {
   const [entrees, setEntrees] = useState<Entree[]>([]);
   const [saisie, setSaisie] = useState('');
   const [chargement, setChargement] = useState(false);
+  const [photo, setPhoto] = useState<PhotoJointe | null>(null);
+  const [photoEnvoyee, setPhotoEnvoyee] = useState(false);
+  const champFichier = useRef<HTMLInputElement | null>(null);
   const compteur = useRef(0);
   const zoneMessages = useRef<HTMLDivElement | null>(null);
 
@@ -204,7 +250,7 @@ export default function AssistantPanel() {
   const repondre = async (historique: Entree[]) => {
     setChargement(true);
     try {
-      const { texte, brouillon } = await demander(historique);
+      const { texte, brouillon } = await demander(historique, photo);
       compteur.current += 1;
       setEntrees([...historique, { id: compteur.current, role: 'assistant', text: texte, brouillon }]);
     } catch (e) {
@@ -217,16 +263,38 @@ export default function AssistantPanel() {
   };
 
   const envoyer = async (texteBrut: string) => {
-    const texte = texteBrut.trim();
+    const joindre = photo !== null && !photoEnvoyee;
+    const texte = texteBrut.trim() || (joindre ? TEXTE_PHOTO : '');
     if (!texte || chargement) return;
     compteur.current += 1;
     const historique: Entree[] = [
       ...entrees.filter((e) => !e.erreur),
-      { id: compteur.current, role: 'user', text: texte.slice(0, MAX_MESSAGE) },
+      {
+        id: compteur.current,
+        role: 'user',
+        text: texte.slice(0, MAX_MESSAGE),
+        ...(joindre && photo ? { avecImage: true, apercu: photo.apercu } : {}),
+      },
     ];
     setEntrees(historique);
     setSaisie('');
+    if (joindre) setPhotoEnvoyee(true);
     await repondre(historique);
+  };
+
+  const choisirPhoto = async (fichier: File | undefined) => {
+    if (!fichier) return;
+    try {
+      setPhoto(await preparerImage(fichier));
+      setPhotoEnvoyee(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Format d'image non pris en charge.");
+    }
+  };
+
+  const retirerPhoto = () => {
+    setPhoto(null);
+    setPhotoEnvoyee(false);
   };
 
   const reessayer = async () => {
@@ -251,7 +319,10 @@ export default function AssistantPanel() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setEntrees([])}
+            onClick={() => {
+              setEntrees([]);
+              retirerPhoto();
+            }}
             disabled={chargement}
           >
             Nouvelle conversation
@@ -287,6 +358,16 @@ export default function AssistantPanel() {
               >
                 Préparer une proforma
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => champFichier.current?.click()}
+                disabled={chargement}
+              >
+                <ImagePlus className="mr-2 h-4 w-4" aria-hidden="true" />
+                Joindre un bon de commande
+              </Button>
             </div>
           </div>
         ) : (
@@ -310,6 +391,13 @@ export default function AssistantPanel() {
                       : 'bg-muted text-foreground')
                   }
                 >
+                  {entree.apercu && (
+                    <img
+                      src={entree.apercu}
+                      alt="Photo jointe"
+                      className="mb-2 max-h-40 rounded-md border"
+                    />
+                  )}
                   <TexteFormate texte={entree.text} />
                   {entree.brouillon && (
                     <ApercuBrouillon
@@ -339,7 +427,48 @@ export default function AssistantPanel() {
         )}
 
         <div className="space-y-2">
+          {photo && (
+            <div className="flex items-center gap-2">
+              <img
+                src={photo.apercu}
+                alt="Photo à envoyer"
+                className="h-14 w-14 rounded-md border object-cover"
+              />
+              <span className="text-xs text-muted-foreground">
+                Photo jointe{photoEnvoyee ? ' (déjà envoyée)' : ''}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={retirerPhoto}
+                disabled={chargement}
+                aria-label="Retirer la photo"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </div>
+          )}
+          <input
+            ref={champFichier}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              void choisirPhoto(e.target.files?.[0]);
+              e.target.value = '';
+            }}
+          />
           <div className="flex items-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => champFichier.current?.click()}
+              disabled={chargement}
+              aria-label="Joindre une photo de bon de commande"
+            >
+              <ImagePlus className="h-4 w-4" aria-hidden="true" />
+            </Button>
             <Textarea
               value={saisie}
               onChange={(e) => setSaisie(e.target.value)}
@@ -357,7 +486,7 @@ export default function AssistantPanel() {
             />
             <Button
               onClick={() => envoyer(saisie)}
-              disabled={chargement || saisie.trim() === ''}
+              disabled={chargement || (saisie.trim() === '' && !(photo && !photoEnvoyee))}
               aria-label="Envoyer"
             >
               <Send className="h-4 w-4" aria-hidden="true" />
@@ -365,7 +494,7 @@ export default function AssistantPanel() {
           </div>
           <p className="text-xs text-muted-foreground">
             L'assistant consulte et prépare, il n'enregistre rien. Mode test : tant qu'il utilise
-            l'offre gratuite de Google, n'y mettez que des données fictives.
+            l'offre gratuite de Google, n'y mettez que des données fictives (photos comprises).
           </p>
         </div>
       </CardContent>
