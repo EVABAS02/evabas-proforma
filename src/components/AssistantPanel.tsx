@@ -14,6 +14,8 @@ import {
   type SourcePrix,
 } from '@/lib/brouillonIA';
 
+type Apercu = { url: string; largeur: number; hauteur: number };
+
 type Entree = {
   id: number;
   role: 'user' | 'assistant';
@@ -21,7 +23,7 @@ type Entree = {
   brouillon?: Brouillon | null;
   erreur?: boolean;
   avecImage?: boolean;
-  apercu?: string;
+  apercu?: Apercu;
 };
 
 type ReponseAssistant = { reponse?: unknown; brouillon?: unknown };
@@ -61,7 +63,7 @@ async function lireErreur(erreur: unknown): Promise<string> {
   return defaut;
 }
 
-type PhotoJointe = { mime: string; data: string; apercu: string };
+type PhotoJointe = { mime: string; data: string; apercu: Apercu };
 
 const TAILLE_MAX_FICHIER = 15 * 1024 * 1024;
 const TAILLE_MAX_BASE64 = 1_500_000;
@@ -91,7 +93,13 @@ async function preparerImage(fichier: File): Promise<PhotoJointe> {
       for (const qualite of [0.8, 0.65, 0.5]) {
         const url = canvas.toDataURL('image/jpeg', qualite);
         const data = url.slice(url.indexOf(',') + 1);
-        if (data.length <= TAILLE_MAX_BASE64) return { mime: 'image/jpeg', data, apercu: url };
+        if (data.length <= TAILLE_MAX_BASE64) {
+          return {
+            mime: 'image/jpeg',
+            data,
+            apercu: { url, largeur: canvas.width, hauteur: canvas.height },
+          };
+        }
       }
     }
   } finally {
@@ -167,9 +175,23 @@ function TexteFormate({ texte }: { texte: string }) {
   );
 }
 
+// Place la zone de conversation : au début de la dernière réponse (pour la lire depuis
+// le haut), ou tout en bas pendant que l'assistant réfléchit.
+function defiler(zone: HTMLDivElement | null, cible: HTMLDivElement | null, versLeDebut: boolean) {
+  if (!zone) return;
+  zone.scrollTop = versLeDebut && cible ? Math.max(0, cible.offsetTop - 8) : zone.scrollHeight;
+}
+
 function ApercuBrouillon({ brouillon, onOuvrir }: { brouillon: Brouillon; onOuvrir: () => void }) {
   return (
     <div className="mt-3 space-y-3 rounded-lg border bg-background p-3 text-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm font-semibold">Brouillon prêt à vérifier</span>
+        <Button onClick={onOuvrir} className="w-full sm:w-auto">
+          Ouvrir dans le formulaire de facture
+        </Button>
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-medium">Client :</span>
         {brouillon.client ? (
@@ -219,14 +241,9 @@ function ApercuBrouillon({ brouillon, onOuvrir }: { brouillon: Brouillon; onOuvr
         </ul>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-xs text-muted-foreground">
-          Rien n'est enregistré : vous vérifiez dans le formulaire.
-        </span>
-        <Button size="sm" onClick={onOuvrir}>
-          Ouvrir dans le formulaire de facture
-        </Button>
-      </div>
+      <p className="text-xs text-muted-foreground">
+        Rien n'est enregistré : vous vérifiez dans le formulaire.
+      </p>
     </div>
   );
 }
@@ -241,11 +258,18 @@ export default function AssistantPanel() {
   const champFichier = useRef<HTMLInputElement | null>(null);
   const compteur = useRef(0);
   const zoneMessages = useRef<HTMLDivElement | null>(null);
+  const dernierMessage = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const zone = zoneMessages.current;
-    if (zone) zone.scrollTop = zone.scrollHeight;
+    const dernier = entrees[entrees.length - 1];
+    defiler(zoneMessages.current, dernierMessage.current, dernier?.role === 'assistant' && !chargement);
   }, [entrees, chargement]);
+
+  // Une photo qui finit de se charger change la hauteur : on se replace.
+  const resynchroniser = () => {
+    const dernier = entrees[entrees.length - 1];
+    defiler(zoneMessages.current, dernierMessage.current, dernier?.role === 'assistant' && !chargement);
+  };
 
   const repondre = async (historique: Entree[]) => {
     setChargement(true);
@@ -373,12 +397,13 @@ export default function AssistantPanel() {
         ) : (
           <div
             ref={zoneMessages}
-            className="max-h-[420px] space-y-3 overflow-y-auto pr-1"
+            className="relative max-h-[60vh] space-y-3 overflow-y-auto pb-2 pr-1"
             aria-live="polite"
           >
-            {entrees.map((entree) => (
+            {entrees.map((entree, index) => (
               <div
                 key={entree.id}
+                ref={index === entrees.length - 1 ? dernierMessage : undefined}
                 className={entree.role === 'user' ? 'flex justify-end' : 'flex justify-start'}
               >
                 <div
@@ -393,9 +418,12 @@ export default function AssistantPanel() {
                 >
                   {entree.apercu && (
                     <img
-                      src={entree.apercu}
+                      src={entree.apercu.url}
+                      width={entree.apercu.largeur}
+                      height={entree.apercu.hauteur}
                       alt="Photo jointe"
-                      className="mb-2 max-h-40 rounded-md border"
+                      onLoad={resynchroniser}
+                      className="mb-2 h-auto max-h-40 w-auto max-w-full rounded-md border"
                     />
                   )}
                   <TexteFormate texte={entree.text} />
@@ -430,7 +458,7 @@ export default function AssistantPanel() {
           {photo && (
             <div className="flex items-center gap-2">
               <img
-                src={photo.apercu}
+                src={photo.apercu.url}
                 alt="Photo à envoyer"
                 className="h-14 w-14 rounded-md border object-cover"
               />
