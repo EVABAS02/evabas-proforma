@@ -40,6 +40,7 @@ const SUGGESTIONS = [
 const LIBELLES_SOURCE: Record<SourcePrix, string> = {
   phrase: 'Prix de la demande',
   catalogue: 'Prix du catalogue',
+  photo: 'Lu sur la photo',
   a_completer: 'Prix à compléter',
 };
 
@@ -108,6 +109,16 @@ async function preparerImage(fichier: File): Promise<PhotoJointe> {
   throw new Error('Impossible de réduire cette image : essayez une photo plus petite.');
 }
 
+// L'IA ne voit pas la carte du brouillon : on lui en renvoie un court résumé pour la suite
+// de la conversation (par exemple « change la quantité du gari »).
+function resumerBrouillon(b: Brouillon): string {
+  const client = b.client ? b.client.nom : (b.client_nom_saisi ?? 'client non reconnu');
+  const lignes = b.lignes
+    .map((l) => `${l.designation} x${l.quantite}${l.prix_unitaire === null ? '' : ` a ${l.prix_unitaire} F`}`)
+    .join('; ');
+  return `[Brouillon affiché à l'utilisateur. Client : ${client}. Lignes : ${lignes}]`;
+}
+
 // Envoie la conversation à la fonction « assistant » (un seul réessai automatique).
 async function demander(
   historique: Entree[],
@@ -116,7 +127,11 @@ async function demander(
   const messages = historique
     .filter((e) => !e.erreur)
     .slice(-MAX_HISTORIQUE)
-    .map((e) => ({ role: e.role, text: e.text, ...(e.avecImage ? { avec_image: true } : {}) }));
+    .map((e) => ({
+      role: e.role,
+      text: (e.brouillon ? `${e.text}\n${resumerBrouillon(e.brouillon)}` : e.text).slice(0, MAX_MESSAGE),
+      ...(e.avecImage ? { avec_image: true } : {}),
+    }));
 
   let derniere = "L'assistant est indisponible pour le moment.";
   for (let essai = 0; essai < 2; essai++) {

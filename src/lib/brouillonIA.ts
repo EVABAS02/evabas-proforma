@@ -1,5 +1,5 @@
 // Brouillon de proforma prepare par l'assistant IA (page Assistant -> formulaire de facture).
-export type SourcePrix = 'phrase' | 'catalogue' | 'a_completer';
+export type SourcePrix = 'phrase' | 'catalogue' | 'a_completer' | 'photo';
 
 export type LigneBrouillon = {
   produit_id: string | null;
@@ -44,7 +44,7 @@ export function lireBrouillon(etat: unknown): Brouillon | null {
       designation: designation.trim(),
       quantite,
       prix_unitaire: typeof prix === 'number' && Number.isFinite(prix) && prix >= 0 ? prix : null,
-      source_prix: source === 'phrase' || source === 'catalogue' ? source : 'a_completer',
+      source_prix: source === 'phrase' || source === 'catalogue' || source === 'photo' ? source : 'a_completer',
     });
   }
 
