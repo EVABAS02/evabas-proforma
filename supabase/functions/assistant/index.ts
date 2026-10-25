@@ -681,12 +681,12 @@ export default {
           const designation = libelle !== "" ? libelle : (produit?.designation ?? "");
           const quantite = nombre(l.quantite);
           if (designation === "" || quantite === null || quantite <= 0 || quantite > MAX_QUANTITE) {
-            remarques.push(`Ligne ignoree (quantite ou libelle invalide) : ${designation || "sans libelle"}`);
+            remarques.push(`Ligne ignorée (quantité ou libellé invalide) : ${designation || "sans libellé"}`);
             continue;
           }
           let prixDonne = nombre(l.prix_unitaire);
           if (prixDonne !== null && !photo && !nombresDits.has(prixDonne)) {
-            remarques.push(`Prix ignore (non indique par l'utilisateur) : ${designation}`);
+            remarques.push(`Prix ignoré (non indiqué par l'utilisateur) : ${designation}`);
             prixDonne = null;
           }
           let prix: number | null = null;
@@ -696,19 +696,19 @@ export default {
             source = nombresDits.has(prixDonne) ? "phrase" : "photo";
             if (produit && Math.abs(prixDonne - produit.prix_unitaire) >= 0.5) {
               remarques.push(
-                `Prix different du catalogue pour ${designation} : ${prixDonne.toLocaleString("fr-FR")} F contre ${produit.prix_unitaire.toLocaleString("fr-FR")} F.`,
+                `Prix différent du catalogue pour ${designation} : ${prixDonne.toLocaleString("fr-FR")} F contre ${produit.prix_unitaire.toLocaleString("fr-FR")} F.`,
               );
             }
           }
           else if (produit) { prix = produit.prix_unitaire; source = "catalogue"; }
-          else remarques.push(`Prix a completer : ${designation}`);
+          else remarques.push(`Prix à compléter : ${designation}`);
           lignes.push({ produit_id: produit?.id ?? null, designation, quantite, prix_unitaire: prix, source_prix: source });
         }
         const points = Array.isArray(a.points_incertains)
           ? a.points_incertains.map((p) => chaine(p, 200)).filter((p) => p !== "").slice(0, 5)
           : [];
-        for (const p of points) remarques.push(`A verifier : ${p}`);
-        if (photo) remarques.push("Quantites et prix lus sur la photo : verifiez chaque ligne.");
+        for (const p of points) remarques.push(`À vérifier : ${p}`);
+        if (photo) remarques.push("Quantités et prix lus sur la photo : vérifiez chaque ligne.");
         if (!client && nomSaisi) remarques.push(`Client non reconnu dans votre liste : ${nomSaisi}`);
         dernierBrouillon = { client, client_nom_saisi: nomSaisi, lignes, remarques };
         return { brouillon_prepare: true, enregistre: false, lignes_retenues: lignes, remarques };
@@ -736,7 +736,7 @@ export default {
     for (let etape = 0; etape < MAX_ETAPES; etape++) {
       if (Date.now() - debutTotal > DELAI_TOTAL_MS) break;
       const r = await appelerGemini(contents, cle, modele, debutTotal + DELAI_TOTAL_MS);
-      if (!r) return Response.json({ error: "Service IA indisponible, reessayez" }, { status: 503 });
+      if (!r) return Response.json({ error: "Service IA indisponible, réessayez" }, { status: 503 });
       modele = r.modele;
       tokens += r.reponse.tokens;
 
