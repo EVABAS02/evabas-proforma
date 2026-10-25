@@ -1,7 +1,7 @@
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import MobileBottomNav from '@/components/MobileBottomNav';
-
+import AssistantDock from '@/components/AssistantDock';
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
@@ -11,6 +11,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6 overflow-auto">{children}</main>
         </div>
         <MobileBottomNav />
+                <AssistantDock />
       </div>
     </SidebarProvider>
   );

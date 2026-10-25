@@ -1,35 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ImagePlus, Loader2, RotateCcw, Send, Sparkles, X } from 'lucide-react';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ImagePlus, Loader2, RotateCcw, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import {
-  CLE_ETAT_BROUILLON,
-  lireBrouillon,
-  type Brouillon,
-  type SourcePrix,
-} from '@/lib/brouillonIA';
-
-type Apercu = { url: string; largeur: number; hauteur: number };
-
-type Entree = {
-  id: number;
-  role: 'user' | 'assistant';
-  text: string;
-  brouillon?: Brouillon | null;
-  erreur?: boolean;
-  avecImage?: boolean;
-  apercu?: Apercu;
-};
-
-type ReponseAssistant = { reponse?: unknown; brouillon?: unknown };
-
-const MAX_HISTORIQUE = 10;
-const MAX_MESSAGE = 2000;
+import { CLE_ETAT_BROUILLON, type Brouillon, type SourcePrix } from '@/lib/brouillonIA';
+import { MAX_MESSAGE, assistantActions, useAssistant } from '@/lib/assistantStore';
 
 const SUGGESTIONS = [
   'Combien de factures ai-je faites ce mois-ci ?',
@@ -46,109 +22,6 @@ const LIBELLES_SOURCE: Record<SourcePrix, string> = {
 
 const formaterMontant = (valeur: number) =>
   `${new Intl.NumberFormat('fr-FR').format(valeur)} F`;
-
-async function lireErreur(erreur: unknown): Promise<string> {
-  const defaut = "L'assistant est indisponible pour le moment.";
-  const contexte = (erreur as { context?: unknown } | null)?.context;
-  if (contexte instanceof Response) {
-    try {
-      const corps: unknown = await contexte.json();
-      if (typeof corps === 'object' && corps !== null && 'error' in corps) {
-        const message = (corps as { error: unknown }).error;
-        if (typeof message === 'string') return message;
-      }
-    } catch {
-      // corps illisible : message par défaut
-    }
-  }
-  return defaut;
-}
-
-type PhotoJointe = { mime: string; data: string; apercu: Apercu };
-
-const TAILLE_MAX_FICHIER = 15 * 1024 * 1024;
-const TAILLE_MAX_BASE64 = 1_500_000;
-const TEXTE_PHOTO = 'Prépare une proforma à partir de ce bon de commande.';
-
-// Réduit la photo (dimensions et qualité) pour qu'elle reste légère à envoyer.
-async function preparerImage(fichier: File): Promise<PhotoJointe> {
-  if (!fichier.type.startsWith('image/')) throw new Error("Ce fichier n'est pas une image.");
-  if (fichier.size > TAILLE_MAX_FICHIER) throw new Error('Image trop lourde (15 Mo maximum).');
-  let bitmap: ImageBitmap;
-  try {
-    bitmap = await createImageBitmap(fichier);
-  } catch {
-    throw new Error("Format d'image non pris en charge (utilisez JPEG, PNG ou WebP).");
-  }
-  try {
-    for (const cote of [1280, 1024, 800]) {
-      const echelle = Math.min(1, cote / Math.max(bitmap.width, bitmap.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(bitmap.width * echelle));
-      canvas.height = Math.max(1, Math.round(bitmap.height * echelle));
-      const contexte = canvas.getContext('2d');
-      if (!contexte) throw new Error('Image illisible.');
-      contexte.fillStyle = '#ffffff';
-      contexte.fillRect(0, 0, canvas.width, canvas.height);
-      contexte.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-      for (const qualite of [0.8, 0.65, 0.5]) {
-        const url = canvas.toDataURL('image/jpeg', qualite);
-        const data = url.slice(url.indexOf(',') + 1);
-        if (data.length <= TAILLE_MAX_BASE64) {
-          return {
-            mime: 'image/jpeg',
-            data,
-            apercu: { url, largeur: canvas.width, hauteur: canvas.height },
-          };
-        }
-      }
-    }
-  } finally {
-    bitmap.close();
-  }
-  throw new Error('Impossible de réduire cette image : essayez une photo plus petite.');
-}
-
-// L'IA ne voit pas la carte du brouillon : on lui en renvoie un court résumé pour la suite
-// de la conversation (par exemple « change la quantité du gari »).
-function resumerBrouillon(b: Brouillon): string {
-  const client = b.client ? b.client.nom : (b.client_nom_saisi ?? 'client non reconnu');
-  const lignes = b.lignes
-    .map((l) => `${l.designation} x${l.quantite}${l.prix_unitaire === null ? '' : ` a ${l.prix_unitaire} F`}`)
-    .join('; ');
-  return `[Brouillon affiché à l'utilisateur. Client : ${client}. Lignes : ${lignes}]`;
-}
-
-// Envoie la conversation à la fonction « assistant » (un seul réessai automatique).
-async function demander(
-  historique: Entree[],
-  photo: PhotoJointe | null,
-): Promise<{ texte: string; brouillon: Brouillon | null }> {
-  const messages = historique
-    .filter((e) => !e.erreur)
-    .slice(-MAX_HISTORIQUE)
-    .map((e) => ({
-      role: e.role,
-      text: (e.brouillon ? `${e.text}\n${resumerBrouillon(e.brouillon)}` : e.text).slice(0, MAX_MESSAGE),
-      ...(e.avecImage ? { avec_image: true } : {}),
-    }));
-
-  let derniere = "L'assistant est indisponible pour le moment.";
-  for (let essai = 0; essai < 2; essai++) {
-    const { data, error } = await supabase.functions.invoke<ReponseAssistant>('assistant', {
-      body: { messages, ...(photo ? { image: { mime_type: photo.mime, data: photo.data } } : {}) },
-    });
-    if (!error && data && typeof data.reponse === 'string') {
-      return {
-        texte: data.reponse,
-        brouillon: lireBrouillon({ [CLE_ETAT_BROUILLON]: data.brouillon }),
-      };
-    }
-    derniere = error ? await lireErreur(error) : "Réponse inattendue de l'assistant.";
-    if (essai === 0) await new Promise((resolve) => setTimeout(resolve, 2000));
-  }
-  throw new Error(derniere);
-}
 
 // Mise en forme minimale (puces et gras) sans HTML brut.
 function Gras({ texte }: { texte: string }) {
@@ -263,117 +136,48 @@ function ApercuBrouillon({ brouillon, onOuvrir }: { brouillon: Brouillon; onOuvr
   );
 }
 
+
+
+// Contenu du panneau latéral : la conversation et la zone de saisie.
+// L'état vit dans assistantStore : il survit aux changements de page.
 export default function AssistantPanel() {
   const nav = useNavigate();
-  const [entrees, setEntrees] = useState<Entree[]>([]);
-  const [saisie, setSaisie] = useState('');
-  const [chargement, setChargement] = useState(false);
-  const [photo, setPhoto] = useState<PhotoJointe | null>(null);
-  const [photoEnvoyee, setPhotoEnvoyee] = useState(false);
-  const champFichier = useRef<HTMLInputElement | null>(null);
-  const compteur = useRef(0);
+  const a = useAssistant();
   const zoneMessages = useRef<HTMLDivElement | null>(null);
   const dernierMessage = useRef<HTMLDivElement | null>(null);
+  const champFichier = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    const dernier = entrees[entrees.length - 1];
-    defiler(zoneMessages.current, dernierMessage.current, dernier?.role === 'assistant' && !chargement);
-  }, [entrees, chargement]);
+    const dernier = a.entrees[a.entrees.length - 1];
+    defiler(zoneMessages.current, dernierMessage.current, dernier?.role === 'assistant' && !a.chargement);
+  }, [a.entrees, a.chargement]);
 
   // Une photo qui finit de se charger change la hauteur : on se replace.
   const resynchroniser = () => {
-    const dernier = entrees[entrees.length - 1];
-    defiler(zoneMessages.current, dernierMessage.current, dernier?.role === 'assistant' && !chargement);
-  };
-
-  const repondre = async (historique: Entree[]) => {
-    setChargement(true);
-    try {
-      const { texte, brouillon } = await demander(historique, photo);
-      compteur.current += 1;
-      setEntrees([...historique, { id: compteur.current, role: 'assistant', text: texte, brouillon }]);
-    } catch (e) {
-      compteur.current += 1;
-      const message = e instanceof Error ? e.message : "L'assistant est indisponible.";
-      setEntrees([...historique, { id: compteur.current, role: 'assistant', text: message, erreur: true }]);
-    } finally {
-      setChargement(false);
-    }
-  };
-
-  const envoyer = async (texteBrut: string) => {
-    const joindre = photo !== null && !photoEnvoyee;
-    const texte = texteBrut.trim() || (joindre ? TEXTE_PHOTO : '');
-    if (!texte || chargement) return;
-    compteur.current += 1;
-    const historique: Entree[] = [
-      ...entrees.filter((e) => !e.erreur),
-      {
-        id: compteur.current,
-        role: 'user',
-        text: texte.slice(0, MAX_MESSAGE),
-        ...(joindre && photo ? { avecImage: true, apercu: photo.apercu } : {}),
-      },
-    ];
-    setEntrees(historique);
-    setSaisie('');
-    if (joindre) setPhotoEnvoyee(true);
-    await repondre(historique);
-  };
-
-  const choisirPhoto = async (fichier: File | undefined) => {
-    if (!fichier) return;
-    try {
-      setPhoto(await preparerImage(fichier));
-      setPhotoEnvoyee(false);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Format d'image non pris en charge.");
-    }
-  };
-
-  const retirerPhoto = () => {
-    setPhoto(null);
-    setPhotoEnvoyee(false);
-  };
-
-  const reessayer = async () => {
-    if (chargement) return;
-    await repondre(entrees.filter((e) => !e.erreur));
+    const dernier = a.entrees[a.entrees.length - 1];
+    defiler(zoneMessages.current, dernierMessage.current, dernier?.role === 'assistant' && !a.chargement);
   };
 
   const ouvrirDansLeFormulaire = (brouillon: Brouillon) => {
+    assistantActions.fermer();
     nav('/factures/nouveau', { state: { [CLE_ETAT_BROUILLON]: brouillon } });
   };
 
-  const derniereEstErreur = entrees.length > 0 && entrees[entrees.length - 1].erreur === true;
+  const photoAEnvoyer = a.photo !== null && !a.photoEnvoyee;
+  const derniereEstErreur = a.entrees.length > 0 && a.entrees[a.entrees.length - 1].erreur === true;
 
   return (
-    <Card className="shadow-card border-border/60">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="font-display flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" aria-hidden="true" />
-          Assistant
-        </CardTitle>
-        {entrees.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setEntrees([]);
-              retirerPhoto();
-            }}
-            disabled={chargement}
-          >
-            Nouvelle conversation
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {entrees.length === 0 ? (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div
+        ref={zoneMessages}
+        className="relative min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3"
+        aria-live="polite"
+      >
+        {a.entrees.length === 0 ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
               Posez une question sur vos factures, demandez une vérification, ou faites préparer une
-              proforma en une phrase.
+              proforma en une phrase ou à partir d'une photo de bon de commande.
             </p>
             <div className="flex flex-wrap gap-2">
               {SUGGESTIONS.map((suggestion) => (
@@ -382,8 +186,8 @@ export default function AssistantPanel() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => envoyer(suggestion)}
-                  disabled={chargement}
+                  onClick={() => void assistantActions.envoyer(suggestion)}
+                  disabled={a.chargement}
                 >
                   {suggestion}
                 </Button>
@@ -392,8 +196,8 @@ export default function AssistantPanel() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setSaisie('Fais-moi une proforma pour ')}
-                disabled={chargement}
+                onClick={() => assistantActions.ecrire('Fais-moi une proforma pour ')}
+                disabled={a.chargement}
               >
                 Préparer une proforma
               </Button>
@@ -402,7 +206,7 @@ export default function AssistantPanel() {
                 variant="outline"
                 size="sm"
                 onClick={() => champFichier.current?.click()}
-                disabled={chargement}
+                disabled={a.chargement}
               >
                 <ImagePlus className="mr-2 h-4 w-4" aria-hidden="true" />
                 Joindre un bon de commande
@@ -410,20 +214,16 @@ export default function AssistantPanel() {
             </div>
           </div>
         ) : (
-          <div
-            ref={zoneMessages}
-            className="relative max-h-[60vh] space-y-3 overflow-y-auto pb-2 pr-1"
-            aria-live="polite"
-          >
-            {entrees.map((entree, index) => (
+          <>
+            {a.entrees.map((entree, index) => (
               <div
                 key={entree.id}
-                ref={index === entrees.length - 1 ? dernierMessage : undefined}
+                ref={index === a.entrees.length - 1 ? dernierMessage : undefined}
                 className={entree.role === 'user' ? 'flex justify-end' : 'flex justify-start'}
               >
                 <div
                   className={
-                    'max-w-[92%] rounded-2xl px-4 py-2 text-sm sm:max-w-[85%] ' +
+                    'max-w-[92%] rounded-2xl px-4 py-2 text-sm ' +
                     (entree.role === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : entree.erreur
@@ -451,7 +251,7 @@ export default function AssistantPanel() {
                 </div>
               </div>
             ))}
-            {chargement && (
+            {a.chargement && (
               <div className="flex justify-start">
                 <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -459,88 +259,103 @@ export default function AssistantPanel() {
                 </div>
               </div>
             )}
+          </>
+        )}
+      </div>
+
+      <div className="space-y-2 border-t px-4 py-3">
+        {a.entrees.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {derniereEstErreur && !a.chargement ? (
+              <Button variant="outline" size="sm" onClick={() => void assistantActions.reessayer()}>
+                <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />
+                Réessayer
+              </Button>
+            ) : (
+              <span />
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => assistantActions.nouvelleConversation()}
+              disabled={a.chargement}
+            >
+              Nouvelle conversation
+            </Button>
           </div>
         )}
 
-        {derniereEstErreur && !chargement && (
-          <Button variant="outline" size="sm" onClick={reessayer}>
-            <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />
-            Réessayer
-          </Button>
-        )}
-
-        <div className="space-y-2">
-          {photo && (
-            <div className="flex items-center gap-2">
-              <img
-                src={photo.apercu.url}
-                alt="Photo à envoyer"
-                className="h-14 w-14 rounded-md border object-cover"
-              />
-              <span className="text-xs text-muted-foreground">
-                Photo jointe{photoEnvoyee ? ' (déjà envoyée)' : ''}
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={retirerPhoto}
-                disabled={chargement}
-                aria-label="Retirer la photo"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </Button>
-            </div>
-          )}
-          <input
-            ref={champFichier}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              void choisirPhoto(e.target.files?.[0]);
-              e.target.value = '';
-            }}
-          />
-          <div className="flex items-end gap-2">
+        {a.photo && (
+          <div className="flex items-center gap-2">
+            <img
+              src={a.photo.apercu.url}
+              alt="Photo à envoyer"
+              className="h-14 w-14 rounded-md border object-cover"
+            />
+            <span className="text-xs text-muted-foreground">
+              Photo jointe{a.photoEnvoyee ? ' (déjà envoyée)' : ''}
+            </span>
             <Button
               type="button"
-              variant="outline"
-              onClick={() => champFichier.current?.click()}
-              disabled={chargement}
-              aria-label="Joindre une photo de bon de commande"
+              variant="ghost"
+              size="sm"
+              onClick={() => assistantActions.retirerPhoto()}
+              disabled={a.chargement}
+              aria-label="Retirer la photo"
             >
-              <ImagePlus className="h-4 w-4" aria-hidden="true" />
-            </Button>
-            <Textarea
-              value={saisie}
-              onChange={(e) => setSaisie(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  void envoyer(saisie);
-                }
-              }}
-              maxLength={MAX_MESSAGE}
-              rows={2}
-              placeholder="Ex. : Combien de factures ai-je faites pour Koffi en octobre ?"
-              aria-label="Votre message à l'assistant"
-              disabled={chargement}
-            />
-            <Button
-              onClick={() => envoyer(saisie)}
-              disabled={chargement || (saisie.trim() === '' && !(photo && !photoEnvoyee))}
-              aria-label="Envoyer"
-            >
-              <Send className="h-4 w-4" aria-hidden="true" />
+              <X className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            L'assistant consulte et prépare, il n'enregistre rien. Mode test : tant qu'il utilise
-            l'offre gratuite de Google, n'y mettez que des données fictives (photos comprises).
-          </p>
+        )}
+        <input
+          ref={champFichier}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            void assistantActions.choisirPhoto(e.target.files?.[0]);
+            e.target.value = '';
+          }}
+        />
+        <div className="flex items-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => champFichier.current?.click()}
+            disabled={a.chargement}
+            aria-label="Joindre une photo de bon de commande"
+          >
+            <ImagePlus className="h-4 w-4" aria-hidden="true" />
+          </Button>
+          <Textarea
+            value={a.saisie}
+            onChange={(e) => assistantActions.ecrire(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                void assistantActions.envoyer(a.saisie);
+              }
+            }}
+            maxLength={MAX_MESSAGE}
+            rows={2}
+            placeholder="Ex. : Combien de factures ai-je faites pour Koffi en octobre ?"
+            aria-label="Votre message à l'assistant"
+            disabled={a.chargement}
+          />
+          <Button
+            onClick={() => void assistantActions.envoyer(a.saisie)}
+            disabled={a.chargement || (a.saisie.trim() === '' && !photoAEnvoyer)}
+            aria-label="Envoyer"
+          >
+            
+            <Send className="h-4 w-4" aria-hidden="true" />
+          </Button>
         </div>
-      </CardContent>
-    </Card>
+        <p className="text-xs text-muted-foreground">
+          L'assistant consulte et prépare, il n'enregistre rien. Mode test : tant qu'il utilise
+          l'offre gratuite de Google, n'y mettez que des données fictives (photos comprises).
+        </p>
+      </div>
+    </div>
   );
 }

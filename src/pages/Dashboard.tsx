@@ -9,7 +9,6 @@ import { Plus, Eye, Pencil, MessageCircle } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import { formatFCFA, formatDateShort } from '@/lib/format';
 import AppLayout from '@/components/AppLayout';
-import AssistantPanel from '@/components/AssistantPanel';
 
 export default function Dashboard() {
   const { data: profile } = useProfile();
@@ -83,8 +82,6 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
-
-        <AssistantPanel />
 
         <Card className="shadow-card border-border/60">
           <CardHeader className="flex flex-row items-center justify-between">
