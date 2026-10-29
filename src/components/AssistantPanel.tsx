@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { ImagePlus, Loader2, RotateCcw, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { CLE_ETAT_BROUILLON, type Brouillon, type SourcePrix } from '@/lib/brouillonIA';
+import type { PropositionAjout } from '@/lib/ajoutProduitsIA';
 import { MAX_MESSAGE, assistantActions, useAssistant } from '@/lib/assistantStore';
 
 const SUGGESTIONS = [
@@ -136,12 +138,77 @@ function ApercuBrouillon({ brouillon, onOuvrir }: { brouillon: Brouillon; onOuvr
   );
 }
 
+function ApercuAjout({
+  ajout,
+  statut,
+  resultat,
+  onConfirmer,
+}: {
+  ajout: PropositionAjout;
+  statut: 'attente' | 'enregistrement' | 'termine';
+  resultat?: string;
+  onConfirmer: () => void;
+}) {
+  const nouveaux = ajout.produits.filter((p) => !p.existe_deja).length;
+  return (
+    <div className="mt-3 space-y-3 rounded-lg border bg-background p-3 text-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm font-semibold">Produits à ajouter</span>
+        {statut === 'termine' ? (
+          <Badge>Ajouté</Badge>
+        ) : (
+          nouveaux > 0 && (
+            <Button onClick={onConfirmer} disabled={statut === 'enregistrement'} className="w-full sm:w-auto">
+              {statut === 'enregistrement' ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  Enregistrement…
+                </>
+              ) : (
+                `Ajouter à la base (${nouveaux})`
+              )}
+            </Button>
+          )
+        )}
+      </div>
 
+      <ul className="space-y-2">
+        {ajout.produits.map((p, i) => (
+          <li
+            key={`${p.designation}-${i}`}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2"
+          >
+            <div>
+              <div className="text-sm font-medium">{p.designation}</div>
+              <div className="text-xs text-muted-foreground">
+                {formaterMontant(p.prix_unitaire)} · {p.unite ?? 'sans unité'} · {p.categorie}
+              </div>
+            </div>
+            {p.existe_deja ? <Badge variant="outline">Existe déjà</Badge> : <Badge variant="secondary">Nouveau</Badge>}
+          </li>
+        ))}
+      </ul>
+
+      {ajout.remarques.length > 0 && (
+        <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+          {ajout.remarques.map((remarque, i) => (
+            <li key={`${remarque}-${i}`}>{remarque}</li>
+          ))}
+        </ul>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        {statut === 'termine' ? resultat : "Rien n'est enregistré tant que vous ne cliquez pas sur le bouton."}
+      </p>
+    </div>
+  );
+}
 
 // Contenu du panneau latéral : la conversation et la zone de saisie.
 // L'état vit dans assistantStore : il survit aux changements de page.
 export default function AssistantPanel() {
   const nav = useNavigate();
+  const qc = useQueryClient();
   const a = useAssistant();
   const zoneMessages = useRef<HTMLDivElement | null>(null);
   const dernierMessage = useRef<HTMLDivElement | null>(null);
@@ -161,6 +228,12 @@ export default function AssistantPanel() {
   const ouvrirDansLeFormulaire = (brouillon: Brouillon) => {
     assistantActions.fermer();
     nav('/factures/nouveau', { state: { [CLE_ETAT_BROUILLON]: brouillon } });
+  };
+
+  const confirmerAjout = async (id: number) => {
+    const ajoutes = await assistantActions.enregistrerAjout(id);
+    // Rafraîchit la page Produits pour que les nouveaux produits apparaissent.
+    if (ajoutes > 0) void qc.invalidateQueries({ queryKey: ['produits'] });
   };
 
   const photoAEnvoyer = a.photo !== null && !a.photoEnvoyee;
@@ -200,6 +273,15 @@ export default function AssistantPanel() {
                 disabled={a.chargement}
               >
                 Préparer une proforma
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => assistantActions.ecrire('Ajoute ces produits au catalogue : ')}
+                disabled={a.chargement}
+              >
+                Ajouter des produits
               </Button>
               <Button
                 type="button"
@@ -246,6 +328,14 @@ export default function AssistantPanel() {
                     <ApercuBrouillon
                       brouillon={entree.brouillon}
                       onOuvrir={() => ouvrirDansLeFormulaire(entree.brouillon as Brouillon)}
+                    />
+                  )}
+                  {entree.ajout && (
+                    <ApercuAjout
+                      ajout={entree.ajout}
+                      statut={entree.ajoutStatut ?? 'attente'}
+                      resultat={entree.ajoutResultat}
+                      onConfirmer={() => void confirmerAjout(entree.id)}
                     />
                   )}
                 </div>
@@ -347,13 +437,12 @@ export default function AssistantPanel() {
             disabled={a.chargement || (a.saisie.trim() === '' && !photoAEnvoyer)}
             aria-label="Envoyer"
           >
-            
             <Send className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          L'assistant consulte et prépare, il n'enregistre rien. Mode test : tant qu'il utilise
-          l'offre gratuite de Google, n'y mettez que des données fictives (photos comprises).
+          L'assistant consulte et prépare. Rien n'est enregistré sans votre clic de confirmation. Mode test :
+          tant qu'il utilise l'offre gratuite de Google, n'y mettez que des données fictives (photos comprises).
         </p>
       </div>
     </div>
