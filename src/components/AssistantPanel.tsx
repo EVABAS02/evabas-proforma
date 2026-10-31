@@ -1,13 +1,15 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ImagePlus, Loader2, RotateCcw, Send, X } from 'lucide-react';
+import { toast } from 'sonner';
+import { ImagePlus, Loader2, Mic, RotateCcw, Send, Square, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { CLE_ETAT_BROUILLON, type Brouillon, type SourcePrix } from '@/lib/brouillonIA';
 import type { PropositionAjout } from '@/lib/ajoutProduitsIA';
-import { MAX_MESSAGE, assistantActions, useAssistant } from '@/lib/assistantStore';
+import { MAX_MESSAGE, assistantActions, lireEtat, useAssistant } from '@/lib/assistantStore';
+import { useDictee } from '@/lib/dictee';
 
 const SUGGESTIONS = [
   'Combien de factures ai-je faites ce mois-ci ?',
@@ -214,10 +216,23 @@ export default function AssistantPanel() {
   const dernierMessage = useRef<HTMLDivElement | null>(null);
   const champFichier = useRef<HTMLInputElement | null>(null);
 
+  // Dictée vocale : le texte dicté s'ajoute dans la zone de saisie, vous relisez avant d'envoyer.
+  const dictee = useDictee(
+    () => lireEtat().saisie,
+    (texte) => assistantActions.ecrire(texte.slice(0, MAX_MESSAGE)),
+    (message) => toast.error(message),
+  );
+  const { annuler: annulerDictee } = dictee;
+
   useEffect(() => {
     const dernier = a.entrees[a.entrees.length - 1];
     defiler(zoneMessages.current, dernierMessage.current, dernier?.role === 'assistant' && !a.chargement);
   }, [a.entrees, a.chargement]);
+
+  // Dès qu'une demande part (par exemple via une suggestion), on coupe le micro.
+  useEffect(() => {
+    if (a.chargement) annulerDictee();
+  }, [a.chargement, annulerDictee]);
 
   // Une photo qui finit de se charger change la hauteur : on se replace.
   const resynchroniser = () => {
@@ -234,6 +249,12 @@ export default function AssistantPanel() {
     const ajoutes = await assistantActions.enregistrerAjout(id);
     // Rafraîchit la page Produits pour que les nouveaux produits apparaissent.
     if (ajoutes > 0) void qc.invalidateQueries({ queryKey: ['produits'] });
+  };
+
+  // Envoi du message : on coupe d'abord le micro pour qu'aucun texte ne revienne après l'envoi.
+  const envoyerSaisie = () => {
+    annulerDictee();
+    void assistantActions.envoyer(lireEtat().saisie);
   };
 
   const photoAEnvoyer = a.photo !== null && !a.photoEnvoyee;
@@ -407,6 +428,11 @@ export default function AssistantPanel() {
             e.target.value = '';
           }}
         />
+        {dictee.ecoute && (
+          <p className="text-xs font-medium text-destructive" role="status">
+            Écoute en cours… parlez, puis relisez le texte avant d'envoyer.
+          </p>
+        )}
         <div className="flex items-end gap-2">
           <Button
             type="button"
@@ -417,23 +443,41 @@ export default function AssistantPanel() {
           >
             <ImagePlus className="h-4 w-4" aria-hidden="true" />
           </Button>
+          {dictee.disponible && (
+            <Button
+              type="button"
+              variant={dictee.ecoute ? 'destructive' : 'outline'}
+              onClick={() => (dictee.ecoute ? dictee.arreter() : dictee.demarrer())}
+              disabled={a.chargement}
+              aria-label={dictee.ecoute ? 'Arrêter la dictée' : 'Dicter un message'}
+              aria-pressed={dictee.ecoute}
+            >
+              {dictee.ecoute ? (
+                <Square className="h-4 w-4 animate-pulse" aria-hidden="true" />
+              ) : (
+                <Mic className="h-4 w-4" aria-hidden="true" />
+              )}
+            </Button>
+          )}
           <Textarea
             value={a.saisie}
             onChange={(e) => assistantActions.ecrire(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                void assistantActions.envoyer(a.saisie);
+                envoyerSaisie();
               }
             }}
             maxLength={MAX_MESSAGE}
             rows={2}
-            placeholder="Ex. : Combien de factures ai-je faites pour Koffi en octobre ?"
+            placeholder={
+              dictee.ecoute ? 'Je vous écoute…' : 'Ex. : Combien de factures ai-je faites pour Koffi en octobre ?'
+            }
             aria-label="Votre message à l'assistant"
             disabled={a.chargement}
           />
           <Button
-            onClick={() => void assistantActions.envoyer(a.saisie)}
+            onClick={envoyerSaisie}
             disabled={a.chargement || (a.saisie.trim() === '' && !photoAEnvoyer)}
             aria-label="Envoyer"
           >
@@ -443,6 +487,7 @@ export default function AssistantPanel() {
         <p className="text-xs text-muted-foreground">
           L'assistant consulte et prépare. Rien n'est enregistré sans votre clic de confirmation. Mode test :
           tant qu'il utilise l'offre gratuite de Google, n'y mettez que des données fictives (photos comprises).
+          Le micro utilise la reconnaissance vocale de votre navigateur (Google sur Chrome) : même règle.
         </p>
       </div>
     </div>
