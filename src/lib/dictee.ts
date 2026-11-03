@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // Types minimaux de la reconnaissance vocale du navigateur (non fournis par TypeScript).
 type MorceauReconnu = { 0: { transcript: string } };
 type EvenementResultat = { results: ArrayLike<MorceauReconnu> };
-type EvenementErreur = { error: string };
+type EvenementErreur = { error: string; message?: string };
 type Reconnaissance = {
   lang: string;
   continuous: boolean;
@@ -12,6 +12,10 @@ type Reconnaissance = {
   onresult: ((e: EvenementResultat) => void) | null;
   onerror: ((e: EvenementErreur) => void) | null;
   onend: (() => void) | null;
+  onaudiostart: (() => void) | null;
+  onsoundstart: (() => void) | null;
+  onspeechstart: (() => void) | null;
+  onnomatch: (() => void) | null;
   start: () => void;
   stop: () => void;
   abort: () => void;
@@ -32,10 +36,14 @@ const MESSAGE_MICRO_REFUSE = "Accès au micro refusé. Autorisez le micro dans v
 const MESSAGES_ERREUR: Record<string, string> = {
   'not-allowed': MESSAGE_MICRO_REFUSE,
   'service-not-allowed': MESSAGE_MICRO_REFUSE,
-  'no-speech': "Je n'ai rien entendu. Réessayez en parlant plus près du micro.",
+  'no-speech':
+    "Aucun son reçu. Vérifiez que le bon micro est sélectionné dans Windows et dans Chrome, puis réessayez.",
   'audio-capture': 'Aucun micro détecté sur cet appareil.',
-  network: 'Dictée indisponible : vérifiez votre connexion.',
+  network: 'Dictée indisponible : Chrome ne joint pas le service de reconnaissance vocale. Vérifiez votre connexion.',
 };
+
+// Messages de diagnostic (visibles dans la console du navigateur, touche F12). Aucun texte dicté n'y est écrit.
+const trace = (message: string) => console.info(`[dictee] ${message}`);
 
 // Dictée vocale : le texte reconnu est ajouté à ce qui est déjà écrit dans la zone de saisie.
 //  - lireSaisie : renvoie le texte actuellement dans la zone de saisie
@@ -67,29 +75,40 @@ export function useDictee(
 
     const base = rappels.current.lireSaisie();
     const separateur = base !== '' && !/\s$/.test(base) ? ' ' : '';
+    let texteRecu = false;
 
+    r.onaudiostart = () => trace('1/3 micro ouvert (audiostart)');
+    r.onsoundstart = () => trace('2/3 du son est arrivé (soundstart)');
+    r.onspeechstart = () => trace('3/3 une voix est détectée (speechstart)');
+    r.onnomatch = () => trace('voix entendue mais non comprise (nomatch)');
     r.onresult = (e) => {
+      if (!texteRecu) trace('premier texte reçu');
+      texteRecu = true;
       let texte = '';
       for (let i = 0; i < e.results.length; i++) texte += e.results[i][0].transcript;
       rappels.current.ecrire(base + separateur + texte.trim());
     };
     r.onerror = (e) => {
+      trace(`erreur : ${e.error}${e.message ? ` (${e.message})` : ''}`);
       if (e.error === 'aborted') return;
       rappels.current.surErreur(MESSAGES_ERREUR[e.error] ?? 'La dictée a échoué. Réessayez.');
     };
     r.onend = () => {
+      trace(`fin de l'écoute (texte reçu : ${texteRecu ? 'oui' : 'non'})`);
       reconnaissance.current = null;
       setEcoute(false);
     };
 
     reconnaissance.current = r;
     try {
+      trace('démarrage');
       r.start();
       setEcoute(true);
-    } catch {
+    } catch (erreur) {
+      trace(`démarrage impossible : ${String(erreur)}`);
       reconnaissance.current = null;
       setEcoute(false);
-      rappels.current.surErreur("Impossible de démarrer la dictée.");
+      rappels.current.surErreur('Impossible de démarrer la dictée.');
     }
   }, []);
 
