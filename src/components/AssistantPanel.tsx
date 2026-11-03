@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { CLE_ETAT_BROUILLON, type Brouillon, type SourcePrix } from '@/lib/brouillonIA';
 import type { PropositionAjout } from '@/lib/ajoutProduitsIA';
 import { MAX_MESSAGE, assistantActions, lireEtat, useAssistant } from '@/lib/assistantStore';
-import { useDictee } from '@/lib/dictee';
+import { useDicteeIA } from '@/lib/dicteeIA';
 
 const SUGGESTIONS = [
   'Combien de factures ai-je faites ce mois-ci ?',
@@ -26,6 +26,9 @@ const LIBELLES_SOURCE: Record<SourcePrix, string> = {
 
 const formaterMontant = (valeur: number) =>
   `${new Intl.NumberFormat('fr-FR').format(valeur)} F`;
+
+const formaterDuree = (secondes: number) =>
+  `${Math.floor(secondes / 60)}:${String(secondes % 60).padStart(2, '0')}`;
 
 // Mise en forme minimale (puces et gras) sans HTML brut.
 function Gras({ texte }: { texte: string }) {
@@ -216,13 +219,16 @@ export default function AssistantPanel() {
   const dernierMessage = useRef<HTMLDivElement | null>(null);
   const champFichier = useRef<HTMLInputElement | null>(null);
 
-  // Dictée vocale : le texte dicté s'ajoute dans la zone de saisie, vous relisez avant d'envoyer.
-  const dictee = useDictee(
+  // Dictée vocale : la voix est transcrite par Gemini, le texte s'ajoute dans la zone de saisie,
+  // vous relisez avant d'envoyer.
+  const dictee = useDicteeIA(
     () => lireEtat().saisie,
     (texte) => assistantActions.ecrire(texte.slice(0, MAX_MESSAGE)),
     (message) => toast.error(message),
   );
   const { annuler: annulerDictee } = dictee;
+  const enregistre = dictee.etat === 'enregistrement';
+  const transcrit = dictee.etat === 'transcription';
 
   useEffect(() => {
     const dernier = a.entrees[a.entrees.length - 1];
@@ -251,8 +257,10 @@ export default function AssistantPanel() {
     if (ajoutes > 0) void qc.invalidateQueries({ queryKey: ['produits'] });
   };
 
-  // Envoi du message : on coupe d'abord le micro pour qu'aucun texte ne revienne après l'envoi.
+  // Envoi du message : on coupe d'abord l'enregistrement pour qu'aucun texte ne revienne après l'envoi.
+  // Pendant la transcription, on attend le texte : l'envoi est bloqué.
   const envoyerSaisie = () => {
+    if (transcrit) return;
     annulerDictee();
     void assistantActions.envoyer(lireEtat().saisie);
   };
@@ -428,9 +436,16 @@ export default function AssistantPanel() {
             e.target.value = '';
           }}
         />
-        {dictee.ecoute && (
+        {enregistre && (
           <p className="text-xs font-medium text-destructive" role="status">
-            Écoute en cours… parlez, puis relisez le texte avant d'envoyer.
+            Enregistrement… {formaterDuree(dictee.duree)} / {formaterDuree(dictee.dureeMax)} · parlez, puis
+            appuyez sur le carré.
+          </p>
+        )}
+        {transcrit && (
+          <p className="flex items-center gap-2 text-xs text-muted-foreground" role="status">
+            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+            Transcription en cours…
           </p>
         )}
         <div className="flex items-end gap-2">
@@ -446,13 +461,15 @@ export default function AssistantPanel() {
           {dictee.disponible && (
             <Button
               type="button"
-              variant={dictee.ecoute ? 'destructive' : 'outline'}
-              onClick={() => (dictee.ecoute ? dictee.arreter() : dictee.demarrer())}
-              disabled={a.chargement}
-              aria-label={dictee.ecoute ? 'Arrêter la dictée' : 'Dicter un message'}
-              aria-pressed={dictee.ecoute}
+              variant={enregistre ? 'destructive' : 'outline'}
+              onClick={() => (enregistre ? dictee.arreter() : void dictee.demarrer())}
+              disabled={a.chargement || transcrit}
+              aria-label={enregistre ? "Arrêter l'enregistrement" : 'Dicter un message'}
+              aria-pressed={enregistre}
             >
-              {dictee.ecoute ? (
+              {transcrit ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : enregistre ? (
                 <Square className="h-4 w-4 animate-pulse" aria-hidden="true" />
               ) : (
                 <Mic className="h-4 w-4" aria-hidden="true" />
@@ -471,14 +488,18 @@ export default function AssistantPanel() {
             maxLength={MAX_MESSAGE}
             rows={2}
             placeholder={
-              dictee.ecoute ? 'Je vous écoute…' : 'Ex. : Combien de factures ai-je faites pour Koffi en octobre ?'
+              enregistre
+                ? 'Je vous écoute…'
+                : transcrit
+                ? 'Transcription en cours…'
+                : 'Ex. : Combien de factures ai-je faites pour Koffi en octobre ?'
             }
             aria-label="Votre message à l'assistant"
             disabled={a.chargement}
           />
           <Button
             onClick={envoyerSaisie}
-            disabled={a.chargement || (a.saisie.trim() === '' && !photoAEnvoyer)}
+            disabled={a.chargement || transcrit || (a.saisie.trim() === '' && !photoAEnvoyer)}
             aria-label="Envoyer"
           >
             <Send className="h-4 w-4" aria-hidden="true" />
@@ -486,8 +507,8 @@ export default function AssistantPanel() {
         </div>
         <p className="text-xs text-muted-foreground">
           L'assistant consulte et prépare. Rien n'est enregistré sans votre clic de confirmation. Mode test :
-          tant qu'il utilise l'offre gratuite de Google, n'y mettez que des données fictives (photos comprises).
-          Le micro utilise la reconnaissance vocale de votre navigateur (Google sur Chrome) : même règle.
+          tant qu'il utilise l'offre gratuite de Google, n'y mettez que des données fictives (photos et voix
+          comprises). Le micro envoie votre enregistrement à Gemini pour le transcrire.
         </p>
       </div>
     </div>
