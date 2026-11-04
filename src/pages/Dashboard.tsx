@@ -3,9 +3,19 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Eye, Pencil, MessageCircle } from 'lucide-react';
+import { 
+  Plus, 
+  Eye, 
+  Pencil, 
+  MessageCircle, 
+  FileText, 
+  Users, 
+  Package, 
+  CreditCard,
+  ChevronRight,
+  HardDrive
+} from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import { formatFCFA, formatDateShort } from '@/lib/format';
 import AppLayout from '@/components/AppLayout';
@@ -53,80 +63,131 @@ export default function Dashboard() {
   });
 
   const kpis = [
-    { label: 'Factures', value: stats?.invoiceCount ?? 0 },
-    { label: 'Clients', value: stats?.clientCount ?? 0 },
-    { label: 'Produits', value: stats?.productCount ?? 0 },
-    { label: 'Total TTC', value: formatFCFA(stats?.total ?? 0) },
+    { label: 'Factures', value: stats?.invoiceCount ?? 0, icon: FileText, primary: true },
+    { label: 'Clients', value: stats?.clientCount ?? 0, icon: Users, primary: false },
+    { label: 'Produits', value: stats?.productCount ?? 0, icon: Package, primary: false },
+    { label: 'Total TTC', value: formatFCFA(stats?.total ?? 0), icon: CreditCard, primary: false },
   ];
 
   return (
     <AppLayout>
-      <div className="space-y-6 sm:space-y-8">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-start justify-between gap-4">
-          <div>
-            <h1 className="font-display text-2xl sm:text-3xl font-bold">{company}</h1>
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">Gestion des factures proforma</p>
+      <div className="space-y-8 bg-white p-4 sm:p-6 rounded-3xl min-h-screen text-slate-900">
+        {/* Header avec Titre et Bouton Principal d'Action */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-blue-50 pb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-sm">
+              <HardDrive className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-blue-950 tracking-tight">{company}</h1>
+              <p className="text-xs text-blue-600/70 font-medium">Espace de gestion et suivi des factures</p>
+            </div>
           </div>
-          <Link to="/factures/nouveau" className="sm:w-auto">
-            <Button className="w-full sm:w-auto rounded-full bg-accent text-accent-foreground hover:bg-accent/90 h-11 px-5 shadow-soft">
-              <Plus className="h-4 w-4 mr-2" /> Nouvelle facture
+
+          <Link to="/factures/nouveau">
+            <Button className="w-full sm:w-auto rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold h-11 px-6 shadow-sm transition-all">
+              <Plus className="h-5 w-5 mr-2" /> Nouvelle facture
             </Button>
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {kpis.map((k) => (
-            <div key={k.label} className="bg-white border border-[#E5E7EB] rounded-xl p-5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-              <p className="text-[12px] uppercase tracking-wide text-[#6B7280] font-medium">{k.label}</p>
-              <p className="font-display font-bold text-[22px] sm:text-[28px] text-[#0F172A] mt-2 truncate">{k.value}</p>
-            </div>
-          ))}
+        {/* Section QUICK ACCESS (Cartes KPIs) */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-blue-950">Accès rapide</h2>
+            <ChevronRight className="h-4 w-4 text-blue-400 cursor-pointer" />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {kpis.map((k) => {
+              const Icon = k.icon;
+              return (
+                <div
+                  key={k.label}
+                  className={`relative p-5 rounded-2xl transition-all duration-200 border ${
+                    k.primary
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20'
+                      : 'bg-blue-50/40 text-blue-950 border-blue-100 hover:bg-blue-50/80'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`text-xs font-bold uppercase tracking-wider ${k.primary ? 'text-blue-100' : 'text-blue-600'}`}>
+                      {k.label}
+                    </span>
+                    <div className={`p-2 rounded-xl ${k.primary ? 'bg-blue-500/40 text-white' : 'bg-blue-100/70 text-blue-600'}`}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <div className="font-extrabold text-2xl truncate">{k.value}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        <Card className="shadow-card border-border/60">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="font-display">Factures recentes</CardTitle>
-            <Link to="/factures" className="text-sm text-primary hover:underline font-medium">Voir tout</Link>
-          </CardHeader>
-          <CardContent>
-            {recent.length === 0 ? (
-              <p className="text-muted-foreground text-sm py-6 text-center">Aucune facture pour le moment.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-muted-foreground border-b">
-                      <th className="py-3 pr-4">N</th>
-                      <th className="py-3 pr-4">Client</th>
-                      <th className="py-3 pr-4 hidden md:table-cell">Date</th>
-                      <th className="py-3 pr-4 text-right">Montant</th>
-                      <th className="py-3 pr-4">Statut</th>
-                      <th className="py-3 text-right hidden sm:table-cell">Actions</th>
+        {/* Section ALL FILES (Tableau récents) */}
+        <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-blue-950">Tous les fichiers récents</h2>
+            <Link to="/factures" className="text-xs font-bold text-blue-600 hover:underline">
+              Voir tout
+            </Link>
+          </div>
+
+          {recent.length === 0 ? (
+            <p className="text-blue-400 text-sm py-8 text-center font-medium">Aucune facture pour le moment.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-blue-100 text-[11px] font-bold text-blue-400 uppercase tracking-wider">
+                    <th className="py-3 px-4">Nom / N°</th>
+                    <th className="py-3 px-4">Client</th>
+                    <th className="py-3 px-4 hidden md:table-cell">Date</th>
+                    <th className="py-3 px-4 text-right">Montant</th>
+                    <th className="py-3 px-4">Statut</th>
+                    <th className="py-3 px-4 text-right hidden sm:table-cell">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-blue-50">
+                  {recent.map((f) => (
+                    <tr key={f.id} className="hover:bg-blue-50/50 transition-colors group">
+                      <td className="py-4 px-4 font-mono font-semibold text-blue-950 flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-blue-600" />
+                        {f.numero}
+                      </td>
+                      <td className="py-4 px-4 font-medium text-blue-900">{f.client_nom || '-'}</td>
+                      <td className="py-4 px-4 text-xs text-blue-400 font-medium hidden md:table-cell">{formatDateShort(f.date_facture)}</td>
+                      <td className="py-4 px-4 text-right font-bold text-blue-950 tabular-nums">{formatFCFA(Number(f.montant_ttc))}</td>
+                      <td className="py-4 px-4">
+                        <StatusBadge status={f.statut} />
+                      </td>
+                      <td className="py-4 px-4 text-right hidden sm:table-cell">
+                        <div className="inline-flex items-center gap-1 opacity-90 group-hover:opacity-100">
+                          <Link to={`/factures/${f.id}`} title="Voir">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-blue-100 rounded-full text-blue-600">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Link to={`/factures/${f.id}/modifier`} title="Modifier">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-blue-100 rounded-full text-blue-600">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Link to={`/factures/${f.id}`} title="WhatsApp">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-blue-100 rounded-full text-blue-600">
+                              <MessageCircle className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {recent.map((f) => (
-                      <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30">
-                        <td className="py-3 pr-4 font-mono font-medium">{f.numero}</td>
-                        <td className="py-3 pr-4">{f.client_nom || '-'}</td>
-                        <td className="py-3 pr-4 text-muted-foreground hidden md:table-cell">{formatDateShort(f.date_facture)}</td>
-                        <td className="py-3 pr-4 text-right font-medium tabular-nums">{formatFCFA(Number(f.montant_ttc))}</td>
-                        <td className="py-3 pr-4"><StatusBadge status={f.statut} /></td>
-                        <td className="py-3 text-right hidden sm:table-cell">
-                          <div className="inline-flex gap-1">
-                            <Link to={`/factures/${f.id}`} title="Voir"><Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="h-4 w-4" /></Button></Link>
-                            <Link to={`/factures/${f.id}/modifier`} title="Modifier"><Button variant="ghost" size="icon" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button></Link>
-                            <Link to={`/factures/${f.id}`} title="WhatsApp"><Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600"><MessageCircle className="h-4 w-4" /></Button></Link>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </AppLayout>
   );

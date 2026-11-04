@@ -96,38 +96,40 @@ export default function Clients() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap justify-between gap-4">
+      <div className="space-y-6 bg-white p-4 sm:p-6 rounded-3xl min-h-screen text-slate-900">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap justify-between gap-4 border-b border-blue-50 pb-6">
           <div>
-            <h1 className="font-display text-2xl sm:text-3xl font-bold">Clients</h1>
-            <p className="text-muted-foreground text-sm sm:text-base">Gerez votre carnet d'adresses</p>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold text-blue-950">Clients</h1>
+            <p className="text-blue-600/70 text-sm sm:text-base font-medium">Gérez votre carnet d'adresses</p>
           </div>
-          <Button onClick={openNew} className="w-full sm:w-auto rounded-full bg-accent hover:bg-accent/90 h-11"><Plus className="h-4 w-4 mr-2" />Nouveau client</Button>
+          <Button onClick={openNew} className="w-full sm:w-auto rounded-full bg-blue-600 hover:bg-blue-700 text-white h-11 font-semibold shadow-sm">
+            <Plus className="h-4 w-4 mr-2" />Nouveau client
+          </Button>
         </div>
 
-        <Card className="shadow-card border-border/60">
+        <Card className="shadow-sm border-blue-100 bg-white">
           <CardHeader>
             <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher..." className="pl-9" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-400" />
+              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher..." className="pl-9 border-blue-100 focus-visible:ring-blue-600" />
             </div>
           </CardHeader>
           <CardContent>
             {filtered.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">Aucun client</p>
+              <p className="text-center text-blue-400 py-8 font-medium">Aucun client</p>
             ) : (
               <>
               <div className="md:hidden space-y-3">
                 {filtered.map(c => (
-                  <div key={c.id} className="border border-border rounded-lg p-4 flex items-start justify-between gap-3">
+                  <div key={c.id} className="border border-blue-100 bg-blue-50/20 rounded-2xl p-4 flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium truncate">{c.nom}</p>
-                      {c.telephone && <p className="text-xs text-muted-foreground mt-0.5">{c.telephone}</p>}
-                      {c.ifu && <p className="text-xs text-muted-foreground truncate">IFU: {c.ifu}</p>}
+                      <p className="font-semibold text-blue-950 truncate">{c.nom}</p>
+                      {c.telephone && <p className="text-xs text-blue-600/70 mt-0.5">{c.telephone}</p>}
+                      {c.ifu && <p className="text-xs text-blue-600/70 truncate">IFU: {c.ifu}</p>}
                     </div>
                     <div className="flex gap-1 shrink-0">
-                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => remove(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-blue-600 hover:bg-blue-100 rounded-full" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-red-500 hover:bg-red-50 rounded-full" onClick={() => remove(c.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 ))}
@@ -135,22 +137,22 @@ export default function Clients() {
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs text-muted-foreground border-b">
+                    <tr className="text-left text-xs text-blue-400 uppercase font-bold border-b border-blue-100">
                       <th className="py-3 pr-4">Nom</th>
-                      <th className="py-3 pr-4">Telephone</th>
+                      <th className="py-3 pr-4">Téléphone</th>
                       <th className="py-3 pr-4">IFU</th>
                       <th className="py-3 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-blue-50">
                     {filtered.map(c => (
-                      <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30">
-                        <td className="py-3 pr-4 font-medium">{c.nom}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">{c.telephone || '-'}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">{c.ifu || '-'}</td>
+                      <tr key={c.id} className="hover:bg-blue-50/50 transition-colors">
+                        <td className="py-3 pr-4 font-semibold text-blue-950">{c.nom}</td>
+                        <td className="py-3 pr-4 text-blue-600/70">{c.telephone || '-'}</td>
+                        <td className="py-3 pr-4 text-blue-600/70">{c.ifu || '-'}</td>
                         <td className="py-3 text-right">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => remove(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-100 rounded-full" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50 rounded-full" onClick={() => remove(c.id)}><Trash2 className="h-4 w-4" /></Button>
                         </td>
                       </tr>
                     ))}
@@ -163,18 +165,18 @@ export default function Clients() {
         </Card>
 
         <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); setOpen(o); }}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>{editing ? 'Modifier le client' : 'Nouveau client'}</DialogTitle></DialogHeader>
+          <DialogContent className="border-blue-100 bg-white">
+            <DialogHeader><DialogTitle className="text-blue-950 font-bold">{editing ? 'Modifier le client' : 'Nouveau client'}</DialogTitle></DialogHeader>
             <form onSubmit={submit} className="space-y-4">
-              <div><Label>Nom *</Label><Input value={form.nom} onChange={e => setForm({ ...form, nom: e.target.value })} required /></div>
+              <div><Label className="text-blue-950">Nom *</Label><Input value={form.nom} onChange={e => setForm({ ...form, nom: e.target.value })} required className="border-blue-100 focus-visible:ring-blue-600" /></div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>Telephone</Label><Input value={form.telephone} onChange={e => setForm({ ...form, telephone: e.target.value })} /></div>
-                <div><Label>IFU</Label><Input value={form.ifu} onChange={e => setForm({ ...form, ifu: e.target.value })} /></div>
+                <div><Label className="text-blue-950">Téléphone</Label><Input value={form.telephone} onChange={e => setForm({ ...form, telephone: e.target.value })} className="border-blue-100 focus-visible:ring-blue-600" /></div>
+                <div><Label className="text-blue-950">IFU</Label><Input value={form.ifu} onChange={e => setForm({ ...form, ifu: e.target.value })} className="border-blue-100 focus-visible:ring-blue-600" /></div>
               </div>
-              <div><Label>Adresse</Label><Input value={form.adresse} onChange={e => setForm({ ...form, adresse: e.target.value })} /></div>
+              <div><Label className="text-blue-950">Adresse</Label><Input value={form.adresse} onChange={e => setForm({ ...form, adresse: e.target.value })} className="border-blue-100 focus-visible:ring-blue-600" /></div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
-                <Button type="submit" className="bg-primary hover:bg-primary/90">{editing ? 'Mettre a jour' : 'Creer'}</Button>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-blue-200 text-blue-950 hover:bg-blue-50 rounded-full">Annuler</Button>
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white rounded-full">{editing ? 'Mettre à jour' : 'Créer'}</Button>
               </DialogFooter>
             </form>
           </DialogContent>

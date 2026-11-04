@@ -63,33 +63,33 @@ export default function Factures() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap justify-between gap-4">
+      <div className="space-y-6 bg-white p-4 sm:p-6 rounded-3xl min-h-screen text-slate-900">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap justify-between gap-4 border-b border-blue-50 pb-6">
           <div>
-            <h1 className="font-display text-2xl sm:text-3xl font-bold">Factures</h1>
-            <p className="text-muted-foreground text-sm sm:text-base">Toutes vos factures proforma</p>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold text-blue-950">Factures</h1>
+            <p className="text-blue-600/70 text-sm sm:text-base font-medium">Toutes vos factures proforma</p>
           </div>
           <Link to="/factures/nouveau" className="sm:w-auto">
-            <Button className="w-full sm:w-auto rounded-full bg-accent hover:bg-accent/90 h-11"><Plus className="h-4 w-4 mr-2" />Nouvelle facture</Button>
+            <Button className="w-full sm:w-auto rounded-full bg-blue-600 hover:bg-blue-700 text-white h-11 font-semibold shadow-sm"><Plus className="h-4 w-4 mr-2" />Nouvelle facture</Button>
           </Link>
         </div>
 
-        <Card className="shadow-card border-border/60">
+        <Card className="shadow-sm border-blue-100 bg-white">
           <CardHeader>
             <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="N ou client..." className="pl-9" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-400" />
+              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="N° ou client..." className="pl-9 border-blue-100 focus-visible:ring-blue-600" />
             </div>
           </CardHeader>
           <CardContent>
             {filtered.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">Aucune facture</p>
+              <p className="text-center text-blue-400 py-8 font-medium">Aucune facture</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs text-muted-foreground border-b">
-                      <th className="py-3 pr-4">N</th>
+                    <tr className="text-left text-xs text-blue-400 uppercase font-bold border-b border-blue-100">
+                      <th className="py-3 pr-4">N°</th>
                       <th className="py-3 pr-4">Client</th>
                       <th className="py-3 pr-4">Date</th>
                       <th className="py-3 pr-4 text-right">Montant TTC</th>
@@ -97,19 +97,19 @@ export default function Factures() {
                       <th className="py-3 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-blue-50">
                     {filtered.map((f) => (
-                      <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30">
-                        <td className="py-3 pr-4 font-mono font-medium">{f.numero}</td>
-                        <td className="py-3 pr-4">{f.client_nom || '-'}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">{formatDateShort(f.date_facture)}</td>
-                        <td className="py-3 pr-4 text-right tabular-nums">{formatFCFA(Number(f.montant_ttc))}</td>
+                      <tr key={f.id} className="hover:bg-blue-50/50 transition-colors">
+                        <td className="py-3 pr-4 font-mono font-semibold text-blue-950">{f.numero}</td>
+                        <td className="py-3 pr-4 font-medium text-blue-900">{f.client_nom || '-'}</td>
+                        <td className="py-3 pr-4 text-blue-600/70">{formatDateShort(f.date_facture)}</td>
+                        <td className="py-3 pr-4 text-right font-bold text-blue-950 tabular-nums">{formatFCFA(Number(f.montant_ttc))}</td>
                         <td className="py-3 pr-4">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button><StatusBadge status={f.statut} /></button>
+                              <button className="cursor-pointer"><StatusBadge status={f.statut} /></button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent>
+                            <DropdownMenuContent className="border-blue-100">
                               {statuses.map(s => (
                                 <DropdownMenuItem key={s} onClick={() => updateStatus(f.id, s)}>
                                   <StatusBadge status={s} />
@@ -118,10 +118,10 @@ export default function Factures() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
-                        <td className="py-3 text-right">
-                          <Link to={`/factures/${f.id}`}><Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="h-4 w-4" /></Button></Link>
-                          <Link to={`/factures/${f.id}/modifier`}><Button variant="ghost" size="icon" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button></Link>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => remove(f.id)}><Trash2 className="h-4 w-4" /></Button>
+                        <td className="py-3 text-right space-x-1">
+                          <Link to={`/factures/${f.id}`}><Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-100 rounded-full"><Eye className="h-4 w-4" /></Button></Link>
+                          <Link to={`/factures/${f.id}/modifier`}><Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-100 rounded-full"><Pencil className="h-4 w-4" /></Button></Link>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50 rounded-full" onClick={() => remove(f.id)}><Trash2 className="h-4 w-4" /></Button>
                         </td>
                       </tr>
                     ))}

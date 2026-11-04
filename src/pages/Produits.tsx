@@ -109,38 +109,40 @@ export default function Produits() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap justify-between gap-4">
+      <div className="space-y-6 bg-white p-4 sm:p-6 rounded-3xl min-h-screen text-black">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap justify-between gap-4 border-b border-blue-100 pb-6">
           <div>
-            <h1 className="font-display text-2xl sm:text-3xl font-bold">Produits</h1>
-            <p className="text-muted-foreground text-sm sm:text-base">Votre catalogue de produits</p>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold text-black">Produits</h1>
+            <p className="text-black/70 text-sm sm:text-base font-medium">Votre catalogue de produits</p>
           </div>
-          <Button onClick={openNew} className="w-full sm:w-auto rounded-full bg-accent hover:bg-accent/90 h-11"><Plus className="h-4 w-4 mr-2" />Nouveau produit</Button>
+          <Button onClick={openNew} className="w-full sm:w-auto rounded-full bg-blue-600 hover:bg-blue-700 text-white h-11 font-semibold shadow-sm">
+            <Plus className="h-4 w-4 mr-2" />Nouveau produit
+          </Button>
         </div>
 
-        <Card className="shadow-card border-border/60">
+        <Card className="shadow-sm border-blue-100 bg-white">
           <CardHeader>
             <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher..." className="pl-9" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-black/50" />
+              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher..." className="pl-9 border-blue-200 focus-visible:ring-blue-600 text-black placeholder:text-black/40" />
             </div>
           </CardHeader>
           <CardContent>
             {filtered.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">Aucun produit</p>
+              <p className="text-center text-black/50 py-8 font-medium">Aucun produit</p>
             ) : (
               <>
               <div className="md:hidden space-y-3">
                 {filtered.map(p => (
-                  <div key={p.id} className="border border-border rounded-lg p-4 flex items-start justify-between gap-3">
+                  <div key={p.id} className="border border-blue-100 bg-blue-50/20 rounded-2xl p-4 flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium truncate">{p.designation}</p>
-                      {p.unite && <p className="text-xs text-muted-foreground mt-0.5">{p.unite}</p>}
-                      <p className="text-sm font-semibold mt-1 tabular-nums">{formatFCFA(p.prix_unitaire)}</p>
+                      <p className="font-semibold text-black truncate">{p.designation}</p>
+                      {p.unite && <p className="text-xs text-black/60 mt-0.5">{p.unite}</p>}
+                      <p className="text-sm font-bold text-black mt-1 tabular-nums">{formatFCFA(p.prix_unitaire)}</p>
                     </div>
                     <div className="flex gap-1 shrink-0">
-                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => remove(p.id)}><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-blue-600 hover:bg-blue-100 rounded-full" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-red-600 hover:bg-red-50 rounded-full" onClick={() => remove(p.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 ))}
@@ -148,7 +150,7 @@ export default function Produits() {
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs text-muted-foreground border-b">
+                    <tr className="text-left text-xs text-black/60 uppercase font-bold border-b border-blue-100">
                       <th className="py-3 pr-4">Designation</th>
                       <th className="py-3 pr-4">Unite</th>
                       <th className="py-3 pr-4">Categorie</th>
@@ -156,16 +158,16 @@ export default function Produits() {
                       <th className="py-3 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-blue-50">
                     {filtered.map(p => (
-                      <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
-                        <td className="py-3 pr-4 font-medium">{p.designation}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">{p.unite || '-'}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">{p.categorie || '-'}</td>
-                        <td className="py-3 pr-4 text-right tabular-nums">{formatFCFA(p.prix_unitaire)}</td>
+                      <tr key={p.id} className="hover:bg-blue-50/40 transition-colors">
+                        <td className="py-3 pr-4 font-semibold text-black">{p.designation}</td>
+                        <td className="py-3 pr-4 text-black/70">{p.unite || '-'}</td>
+                        <td className="py-3 pr-4 text-black/70">{p.categorie || '-'}</td>
+                        <td className="py-3 pr-4 text-right font-bold text-black tabular-nums">{formatFCFA(p.prix_unitaire)}</td>
                         <td className="py-3 text-right">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => remove(p.id)}><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-100 rounded-full" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:bg-red-50 rounded-full" onClick={() => remove(p.id)}><Trash2 className="h-4 w-4" /></Button>
                         </td>
                       </tr>
                     ))}
@@ -178,26 +180,26 @@ export default function Produits() {
         </Card>
 
         <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); setOpen(o); }}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>{editing ? 'Modifier le produit' : 'Nouveau produit'}</DialogTitle></DialogHeader>
+          <DialogContent className="border-blue-100 bg-white text-black">
+            <DialogHeader><DialogTitle className="text-black font-bold">{editing ? 'Modifier le produit' : 'Nouveau produit'}</DialogTitle></DialogHeader>
             <form onSubmit={submit} className="space-y-4">
-              <div><Label>Designation *</Label><Input value={form.designation} onChange={e => setForm({ ...form, designation: e.target.value })} required /></div>
+              <div><Label className="text-black font-semibold">Designation *</Label><Input value={form.designation} onChange={e => setForm({ ...form, designation: e.target.value })} required className="border-blue-200 focus-visible:ring-blue-600 text-black" /></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><Label>Unite</Label><Input value={form.unite} onChange={e => setForm({ ...form, unite: e.target.value })} placeholder="piece, m2, kg..." /></div>
-                <div><Label>Prix unitaire (FCFA) *</Label><Input type="number" min="0" value={form.prix_unitaire} onChange={e => setForm({ ...form, prix_unitaire: Number(e.target.value) })} required /></div>
+                <div><Label className="text-black font-semibold">Unite</Label><Input value={form.unite} onChange={e => setForm({ ...form, unite: e.target.value })} placeholder="piece, m2, kg..." className="border-blue-200 focus-visible:ring-blue-600 text-black" /></div>
+                <div><Label className="text-black font-semibold">Prix unitaire (FCFA) *</Label><Input type="number" min="0" value={form.prix_unitaire} onChange={e => setForm({ ...form, prix_unitaire: Number(e.target.value) })} required className="border-blue-200 focus-visible:ring-blue-600 text-black" /></div>
               </div>
               <div>
-                <Label>Catégorie</Label>
+                <Label className="text-black font-semibold">Catégorie</Label>
                 <Select value={form.categorie} onValueChange={categorie => setForm({ ...form, categorie })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {categories.map(categorie => <SelectItem key={categorie} value={categorie}>{categorie}</SelectItem>)}
+                  <SelectTrigger className="border-blue-200 focus:ring-blue-600 text-black"><SelectValue /></SelectTrigger>
+                  <SelectContent className="border-blue-200 bg-white text-black">
+                    {categories.map(categorie => <SelectItem key={categorie} value={categorie} className="hover:bg-blue-50">{categorie}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
-                <Button type="submit" className="bg-primary hover:bg-primary/90">{editing ? 'Mettre a jour' : 'Creer'}</Button>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-blue-300 text-black hover:bg-blue-50 rounded-full font-semibold">Annuler</Button>
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold">{editing ? 'Mettre a jour' : 'Creer'}</Button>
               </DialogFooter>
             </form>
           </DialogContent>
